@@ -10,6 +10,9 @@ python = "^3.11"
 numpy = "^1.26.4"
 pandas = "^2.2.2"
 matplotlib = "^3.9.0"
+networkx = "^3.3"
+osmnx = "^1.9.3"
+geopandas = "^0.14.4"
 
 
 [build-system]
