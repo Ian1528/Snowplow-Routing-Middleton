@@ -128,6 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# cache
+.cache/
+
 # Custom
 data/
 .DS_Store
