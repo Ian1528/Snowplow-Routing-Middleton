@@ -7,7 +7,7 @@ from costs import single_edge_cost
 from collections import deque
 from turns import angle_between_vectors, turn_direction
 from params import DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
-from shortest_paths import predecesoors, distances, distance_matrix
+from shortest_paths import predecessors, distances, distance_matrix
 
 def visit_arc(G: nx.Graph, arc: tuple, route: list, options: bool, curr_salt : float, route_required : list[RouteStep] = [], undirected=False) -> tuple[int, int]:
     """

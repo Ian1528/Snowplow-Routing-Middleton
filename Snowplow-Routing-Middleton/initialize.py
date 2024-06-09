@@ -190,7 +190,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     return G
   
 
-def add_multiedges(G: nx.Graph) -> nx.MultiDiGraph:
+def add_multi_edges(G: nx.Graph) -> nx.MultiDiGraph:
     """
     Adds multiple edges to a graph based on the 'passes_rem' attribute of each edge.
 
@@ -207,6 +207,7 @@ def add_multiedges(G: nx.Graph) -> nx.MultiDiGraph:
         for i in range(int(attrbs['passes_rem']-1)):
             G_new.add_edge(edge[0], edge[1],i+1)
             nx.set_edge_attributes(G_new, {(edge[0], edge[1],i+1):attrbs})
+    return G_new
 
 if __name__ == "__main__":
     create_small_toy()
