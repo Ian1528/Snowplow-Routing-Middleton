@@ -168,6 +168,22 @@ class ShortestPaths:
                 correct_index = sorted_indices[j]
                 nearest_neighbors[index_edge_dict[i]][j] = index_edge_dict[correct_index]
         return nearest_neighbors
+    
+    def get_shortest_path(self, edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> list:
+        """
+        Returns the shortest path between two edges of the primal graph.
+
+        Args:
+            edge1: The first edge.
+            edge2: The second edge.
+
+        Returns:
+            list: The shortest path between the two edges.
+        """
+        if self.params_match_graph():
+            return nx.reconstruct_path(edge1, edge2, self.predecessors)
+        else:
+            raise Exception("Graph and parameters don't match. Recompute paths")
 
 if __name__ == "__main__":
     from main import G_DUAL

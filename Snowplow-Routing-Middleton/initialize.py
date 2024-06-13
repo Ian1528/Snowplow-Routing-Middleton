@@ -77,6 +77,7 @@ def create_small_toy() -> nx.MultiDiGraph:
         G (networkx.MultiDiGraph): The constructed graph.
 
     """
+    
     edgelist = pd.read_csv("Snowplow-Routing-Middleton/graph_data/edges.csv")
     nodelist = pd.read_csv("Snowplow-Routing-Middleton/graph_data/nodes.csv")
 

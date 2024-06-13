@@ -1,9 +1,10 @@
 DEPOT = 0
 SALT_CAP = 100
-alpha = 1
-selection_weights = [0.4, 0.2, 0.4]
+ALPHA = 1
+SELECTION_WEIGHTS = [0.4, 0.2, 0.4]
+RAND_THRESH = 0.2
 
-parameters = [DEPOT, SALT_CAP, alpha, selection_weights]
+parameters = [DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS]
 
 def set_params(params: dict) -> None:
     """
