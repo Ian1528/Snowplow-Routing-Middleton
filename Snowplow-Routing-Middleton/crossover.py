@@ -7,24 +7,24 @@ from shortest_paths import ShortestPaths
 from routestep import RouteStep
 from params import DEPOT
 
-def combine(s1: list[list[RouteStep]], s2: list[list[RouteStep]]) -> tuple[list[list[RouteStep]], int]:
+def combine(routes1: list[list[RouteStep]], routes2: list[list[RouteStep]]) -> tuple[list[list[RouteStep]], int]:
     """
-    Combines two parent routes s1 and s2 into a child route
+    Combines two parent routes into a child route
 
     Args:
-        s1 (list[list[RouteStep]]): parent route 1
-        s2 (list[list[RouteStep]]): parent route 2
+        routes1 (list[list[RouteStep]]): parent route 1
+        routes2 (list[list[RouteStep]]): parent route 2
 
     Returns:
         tuple[list[list[RouteStep]], int]: the new child route, as well as the index of the route that was replaced
     """
-    s0 = copy.deepcopy(s1)
-    remove_index = int(np.random.random()*len(s1))
-    add_index = int(np.random.random()*len(s2))
+    routes0 = copy.deepcopy(routes1)
+    remove_index = int(np.random.random()*len(routes1))
+    add_index = int(np.random.random()*len(routes2))
 
     # make the swap
-    s0[remove_index] = s2[add_index]
-    return s0, remove_index
+    routes0[remove_index] = routes2[add_index]
+    return routes0, remove_index
 
 
 def remove_duplicates(changed_route_index: int, routes: list[list[RouteStep]], sp: ShortestPaths):
@@ -45,43 +45,45 @@ def remove_duplicates(changed_route_index: int, routes: list[list[RouteStep]], s
         if h == changed_route_index:
             continue
         for i in range(len(route)):
-            edge = route[i]
-            if edge in added_route:
+            step = route[i]
+            edge = step.get_edge()
+
+            if step in added_route:
                 # duplicate
-                j = added_route.index(edge)
-                prev_edge = (DEPOT,DEPOT,0) if j == 0 else added_route[j-1]
-                next_edge = (DEPOT,DEPOT,0) if j == len(added_route)-1 else added_route[j+1]
+                j = added_route.index(step)
+                prev_edge = (DEPOT,DEPOT,0) if j == 0 else added_route[j-1].get_edge()
+                next_edge = (DEPOT,DEPOT,0) if j == len(added_route)-1 else added_route[j+1].get_edge()
 
                 diff1 = sp.get_dist(prev_edge, edge) + sp.get_dist(edge, next_edge) - sp.get_dist(prev_edge, next_edge)
 
-                prev_edge = (DEPOT,DEPOT,0) if i == 0 else route[i-1]
-                next_edge = (DEPOT,DEPOT,0) if i == len(route)-1 else route[i+1]
+                prev_edge = (DEPOT,DEPOT,0) if i == 0 else route[i-1].get_edge()
+                next_edge = (DEPOT,DEPOT,0) if i == len(route)-1 else route[i+1].get_edge()
 
                 diff2 = sp.get_dist(prev_edge, edge) + sp.get_dist(edge, next_edge) - sp.get_dist(prev_edge, next_edge)
                 
                 # compare the two places to remove the edge
                 if diff2 > diff1:
-                    added_route.remove(edge)
+                    added_route.remove(step)
                 else:
-                    new_route.remove(edge)
+                    new_route.remove(step)
         route = new_route
 
 
-def get_missing_edges(G: nx.MultiDiGraph, s0: list[list[RouteStep]]) -> set:
+def get_missing_edges(G: nx.MultiDiGraph, routes: list[list[RouteStep]]) -> set:
     """
     Given a graph network and a current solution of routes, find all edges that still haven't been serviced.
 
     Args:
         G (nx.MultiDiGraph): graph representing network
-        s0 (list[list[RouteStep]]): current routes
+        routes (list[list[RouteStep]]): current routes
 
     Returns:
         set: set of unserviced edges
     """
     condensed_routes = list()
-    for route in s0:
+    for route in routes:
         for step in route:
-            condensed_routes.append((step.node1, step.node2, step.edge_id))
+            condensed_routes.append(step.get_edge())
     
     required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
 
@@ -119,24 +121,24 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[RouteSte
     return best_routes
 
 
-def crossover_routes(G: nx.MultiDiGraph, s1: list[list[RouteStep]], s2: list[list[RouteStep]], sp: ShortestPaths) -> list[list[RouteStep]]:
+def apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[RouteStep]], routes2: list[list[RouteStep]]) -> list[list[RouteStep]]:
     """
-    Takes two full sets of routes S1 and S2 and returns the crossover between them
+    Takes two full sets of routes and returns the crossover between them
 
     Args:
         G (nx.MultiDiGraph): the graph of the network
-        s1 (list[list[RouteStep]]): the first set of routes
-        s2 (list[list[RouteStep]]): the second set of routes
         sp (ShortestPaths): shortest paths object corresponding to the graph network
+        routes1 (list[list[RouteStep]]): the first set of routes
+        routes2 (list[list[RouteStep]]): the second set of routes
 
     Returns:
         list[list[RouteStep]]: new set of routes
     """
 
-    s0, change_index = combine(s1, s2)
-    remove_duplicates(change_index, s0, sp)
+    routes0, change_index = combine(routes1, routes2)
+    remove_duplicates(change_index, routes0, sp)
 
-    for edge in get_missing_edges(G, s0):
+    for edge in get_missing_edges(G, routes0):
         step = RouteStep(edge[0], edge[1], edge[2])
-        s0 = insert_edge(G, step, s0, sp)
-    return s0
+        routes0 = insert_edge(G, step, routes0, sp)
+    return routes0

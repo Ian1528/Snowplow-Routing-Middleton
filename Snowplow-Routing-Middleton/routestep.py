@@ -24,6 +24,12 @@ class RouteStep:
     def __repr__(self):
         return str(self)
     
-    def get_edge(self):
+    def get_edge(self) -> tuple[int, int, int]:
+        """
+        Returns the edge information of the route step.
+
+        Returns:
+            tuple[int, int, int]: A tuple containing the node1, node2, and edge_id of the route step.
+        """
         return (self.node1, self.node2, self.edge_id)
     
