@@ -136,16 +136,16 @@ class ShortestPaths:
         """
         self.dists_array = nx.floyd_warshall_numpy(self.G_DUAL, weight='weight')
 
-    def get_dist(self, edge1, edge2) -> float:
+    def get_dist(self, edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> float:
         """
         Returns the shortest distance between two edges of the graph.
 
         Args:
-            edge1: The first edge.
-            edge2: The second edge.
+            edge1 (tuple[int, int, int]): The first edge.
+            edge2 (tuple[int, int, int]): The second edge.
 
         Returns:
-            The shortest distance between the two edges.
+            float: The shortest distance between the two edges.
         """
         node1 = self.edge_index_dict[edge1]
         node2 = self.edge_index_dict[edge2]

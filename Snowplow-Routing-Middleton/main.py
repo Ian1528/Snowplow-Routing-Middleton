@@ -3,6 +3,8 @@ import dual_graphs
 import construction
 import plotting
 from shortest_paths import ShortestPaths
+from crossover import crossover_routes
+
 
 G = None
 G_DUAL = None
@@ -60,8 +62,13 @@ create_instance(("smallstreets", "genetic"))
 # 2. Generate shortest paths model
 shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
 # 3. Generate initial routes
-routes, routes_required = construction.route_generation(G, shortest_paths)
+r1, rreq1 = construction.route_generation(G, shortest_paths)
+r2, rreq2 = construction.route_generation(G, shortest_paths)
 # 4. Plot initial routes
-G_graph = plotting.add_order_attribute(G, routes_required)
+G_graph = plotting.add_order_attribute(G, rreq1)
 plotting.draw_labeled_multigraph(G_graph, 'order')
+
 # 5. Route Improvement Algorithms
+rreq0 = crossover_routes(G, rreq1, rreq2, shortest_paths)
+
+print("DONE")

@@ -27,7 +27,7 @@ def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Gra
 
     node_lables = dict([(node, "") if node != DEPOT else (node, "depot") for node in G.nodes()]) # label the depot
 
-    plt.figure(figsize=(75, 50))
+    plt.figure(figsize=(100, 75))
     plt.title(title, size=50)
 
     if plotDepot:

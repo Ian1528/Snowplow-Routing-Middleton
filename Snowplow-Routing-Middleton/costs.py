@@ -2,7 +2,7 @@ import networkx as nx
 from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
 from routestep import RouteStep
-from params import DEPOT
+from params import DEPOT, COST_WEIGHTS
 
 def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> float:
     """
@@ -65,7 +65,7 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     return weight
 
 
-def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[RouteStep]], DEADHEAD_PENALTY: int) -> float:
+def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[RouteStep]]) -> float:
     """
     Calculates the total cost of a full set of routes, represented as a 2d list of routestep objects.
 
@@ -73,12 +73,13 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[Ro
         G (nx.Graph): the graph of the network
         shortest_paths (ShortestPaths): the shortestpaths object related to that graph (used for getting costs)
         routes (list[list[RouteStep]]): the routes to be evaluated
-        DEADHEAD_PENALTY (int): a multiplier indicating the amount that deadheading should be penalized
 
     Returns:
-        float: _description_
+        float: the cost of the route
     """
-    cost = 0
+    time_cost = 0
+    priority_cost = 0
+    deadhead_cost = 0
     time = 0
     for route in routes:
         for i in range(len(route)):
@@ -86,25 +87,26 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[Ro
 
             # penalize the turn
             if i+1 < len(route):
-                next_edge = route[i+1]
+                next_edge = (route[i+1].node1, route[i+1].node2, route[i+1].edge_id)
                 # add cost, which incorpates turn penalties already
-                cost += shortest_paths.get_dist(edge, next_edge) 
+                time_cost += shortest_paths.get_dist(edge, next_edge) 
             else:
                 # last required edge in the route, consider return to DEPOT
-                cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
+                time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
 
             # penalize priorities
             edge_data = G[edge[0]][edge[1]][edge[2]]
             time += edge_data['travel_time']
-            priority_cost = edge_data['priority'] * time
+            priority_cost += edge_data['priority'] * time
             
-            cost += priority_cost
         # penalize number of returns to depot
     # penalize deadheading
     for edge in G.edges(data=True):
-        cost += edge[2]['deadheading_passes']*DEADHEAD_PENALTY
+        deadhead_cost += edge[2]['deadheading_passes']
 
-    return cost
+    all_costs = [time_cost, deadhead_cost, priority_cost]
+    total_cost = 0
 
-# TODO: Modify the costs function such that time, priority, and deadheading are three separate variables being
-# tracked. Then it becomes much easier to normalize/apply weights to each respective area.
+    for i in range(3):
+        total_cost += all_costs[i]*COST_WEIGHTS[i]
+    return total_cost
