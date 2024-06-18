@@ -3,7 +3,8 @@ import dual_graphs
 import construction
 import plotting
 from shortest_paths import ShortestPaths
-from crossover import crossover_routes
+from crossover import apply_crossover
+from genetic import run_genetic
 
 
 G = None
@@ -58,17 +59,25 @@ def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=F
             G_DUAL = dual_graphs.create_dual_toy(G, False, True)
 
 # 1. Create primal and dual graphs
-create_instance(("smallstreets", "genetic"))
+create_instance(("smalltoy", "genetic"))
 # 2. Generate shortest paths model
 shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
 # 3. Generate initial routes
 r1, rreq1 = construction.route_generation(G, shortest_paths)
 r2, rreq2 = construction.route_generation(G, shortest_paths)
-# 4. Plot initial routes
-G_graph = plotting.add_order_attribute(G, rreq1)
+
+# 4. Route Improvement Algorithms
+sol = run_genetic(G, shortest_paths)
+
+for route in sol.routes:
+    for edge in route:
+        print(edge)
+    print("***")
+
+
+# 5. Plot final routes
+G_graph = plotting.add_order_attribute(G, sol.routes)
 plotting.draw_labeled_multigraph(G_graph, 'order')
 
-# 5. Route Improvement Algorithms
-rreq0 = crossover_routes(G, rreq1, rreq2, shortest_paths)
-
 print("DONE")
+print("Routes cost", sol.cost)

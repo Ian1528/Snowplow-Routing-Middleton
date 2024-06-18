@@ -304,8 +304,6 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
 
     return rcl[index]
 
-
-
 def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[RouteStep], DEPOT: int, curr_salt: float, sp_model: ShortestPaths) -> tuple[list[RouteStep], list[RouteStep]]:
     """
     Implements the Route Construction Algorithm (RCA) for snowplow routing.

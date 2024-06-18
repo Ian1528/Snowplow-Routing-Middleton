@@ -8,50 +8,7 @@ from crossover import apply_crossover
 from construction import route_generation
 from costs import routes_cost
 import random
-
-class Solution:
-    """
-    Represents a solution for the snowplow routing problem.
-    
-    Attributes:
-        routes (list[list[RouteStep]]): The list of routes for the solution.
-        similarities (dict["Solution", int]): A dictionary of similarities between this solution and other solutions.
-        cost (int): The cost of the solution.
-        totalSimScore (int): The total similarity score of the solution.
-    """
-    
-    def __init__(self, routes: list[list[RouteStep]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
-        self.routes = routes
-        self.cost = cost
-        self.similarities = similarities
-        self.totalSimScore = totalSimScore
-
-    def __str__(self):
-        return f"Cost: {self.cost}, Similarity Score: {self.totalSimScore}, Similarities: {self.similarities}"
-    
-    def __repr__(self):
-        return str(self)
-    
-    def add_similarity(self, S: "Solution", sim) -> None:
-        """
-        Adds a similarity score between this solution and another solution.
-        
-        Args:
-            S (Solution): The other solution to compare with.
-            sim (int): The similarity score between the solutions.
-        """
-        self.similarities[S] = sim
-        self.totalSimScore += sim
-        
-    def remove_similarity(self, S: "Solution") -> None:
-        """
-        Removes the similarity score between this solution and another solution.
-        
-        Args:
-            S (Solution): The other solution to remove the similarity score for.
-        """
-        self.totalSimScore -= self.similarities[S]
-        del self.similarities[S]
+from solution import Solution
 
 
 def similarity(S1: Solution, S2: Solution) -> int:
@@ -150,8 +107,8 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
     required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
 
     for i in range(POP_SIZE):
+        print("initial generation", i)
         r, rreq = route_generation(G, sp)
-
         new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq), 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, K)
         
@@ -170,6 +127,7 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
 
 
     for i in range(N_ITER):
+        print("Iteration", i)
         # select a random solution
         S1 = random.choice(population)
         # select another random solution
@@ -196,3 +154,4 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
         remove_worst(population, BETA)
 
     return sol_best
+

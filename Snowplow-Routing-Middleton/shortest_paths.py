@@ -11,6 +11,7 @@ class ShortestPaths:
     def __init__(self, G_DUAL, load_data=True, save_data=False):
         self.G_DUAL: nx.MultiDiGraph = G_DUAL
         self.edge_index_dict = {edge:index for index, edge in enumerate(self.G_DUAL.nodes)}
+        self.index_edge_dict = {index:edge for index, edge in enumerate(self.G_DUAL.nodes)}
         self.predecessors = None
         self.dists_array = None
 
