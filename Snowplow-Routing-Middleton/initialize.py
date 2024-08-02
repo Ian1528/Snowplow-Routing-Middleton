@@ -64,7 +64,7 @@ def config_graph_attributes(G: nx.Graph) -> None:
     nx.set_edge_attributes(G, 0, "deadheading_passes")
 
 
-def create_small_toy() -> nx.MultiDiGraph:
+def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv", nodeFile="Snowplow-Routing-Middleton/graph_data/nodes.csv") -> nx.MultiDiGraph:
     """
     Create a small toy graph for snowplow routing in Middleton.
 
@@ -78,8 +78,8 @@ def create_small_toy() -> nx.MultiDiGraph:
 
     """
     
-    edgelist = pd.read_csv("Snowplow-Routing-Middleton/graph_data/edges.csv")
-    nodelist = pd.read_csv("Snowplow-Routing-Middleton/graph_data/nodes.csv")
+    edgelist = pd.read_csv(edgeFile)
+    nodelist = pd.read_csv(nodeFile)
 
     G = nx.MultiDiGraph()
     for i, edges in edgelist.iterrows():
@@ -137,10 +137,10 @@ def create_full_streets() -> nx.MultiDiGraph:
         nx.MultiDiGraph: The full scale streets network
     """
     # Read the shapefile
-    street_gdf = gpd.read_file("Snowplow-Routing-Middleton/graph_data/OSMWithData.gpkg")
+    street_gdf = gpd.read_file("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\OSMWithData.gpkg")
 
     # Read the OSM Graph
-    G = pickle.load(open('Snowplow-Routing-Middleton/graph_data/streets_graph.pickle', 'rb'))
+    G = pickle.load(open("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\streets_graph.pickle", 'rb'))
     G = nx.convert_node_labels_to_integers(G)
 
     nodes, edges = ox.graph_to_gdfs(G) # better than momepy b/c fills in missing geometry attributes
