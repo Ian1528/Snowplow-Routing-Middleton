@@ -7,8 +7,7 @@ def get_node_pos(G):
     return {node[0]: (node[1]['x'], node[1]['y']) for node in G.nodes(data=True)}
 
 
-
-def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Graph Representation of Town", plotDepot=False, depotCoords=None):
+def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Graph Representation of Town", size=(100,75), plotDepot=False, depotCoords=None):
     """_summary_
 
     Args:
@@ -27,7 +26,7 @@ def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Gra
 
     node_lables = dict([(node, "") if node != DEPOT else (node, "depot") for node in G.nodes()]) # label the depot
 
-    plt.figure(figsize=(100, 75))
+    plt.figure(figsize=size)
     plt.title(title, size=50)
 
     if plotDepot:

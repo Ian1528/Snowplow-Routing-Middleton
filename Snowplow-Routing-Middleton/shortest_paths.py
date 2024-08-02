@@ -54,8 +54,7 @@ class ShortestPaths:
         check2 = len(self.predecessors) == len(self.G_DUAL.nodes)
 
         return check1 and check2
-
-    def load_dists_array(self, filename="Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
+    def load_dists_array(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
         """
         Loads the distance matrix from a NumPy file.
 
@@ -65,15 +64,15 @@ class ShortestPaths:
         Raises:
             Exception: If there is no data to load.
         """
-        filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
+        # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            self.dists_array = np.load(filepath)
+            self.dists_array = np.load(filename)
         except:
             self.dists_array = None
             print("No data to fetch")
     
-    def save_dists_array(self, filename="Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
+    def save_dists_array(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
         """
         Saves the distance matrix to a NumPy file.
 
@@ -83,13 +82,13 @@ class ShortestPaths:
         Raises:
             Exception: If there is no data to save. First compute the distance matrix before saving.
         """
-        filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
+        # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         if self.dists_array is None:
             raise Exception("No data to save. First compute the distance matrix before saving")
-        np.save(filepath, self.dists_array)
+        np.save(filename, self.dists_array)
 
-    def load_pred_and_dist(self, filename="Snowplow-Routing-Middleton/graph_data/preds_and_dists.pickle"):
+    def load_pred_and_dist(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\preds_and_dists.pickle"):
         """
         Loads the predecessors and distances from a pickle file.
 
@@ -99,16 +98,16 @@ class ShortestPaths:
         Raises:
             Exception: If there is no data to save.
         """
-        filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
+        # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            with open(filepath, 'rb') as f:
+            with open(filename, 'rb') as f:
                 self.predecessors = pickle.load(f)
         except:
             self.predecessors = None
             print("No data to fetch")
 
-    def save_pred_and_dist(self, filename="Snowplow-Routing-Middleton\\graph_data\\preds_and_dists.pickle"):
+    def save_pred_and_dist(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\preds_and_dists.pickle"):
         """
         Saves the predecessors and distances to a pickle file.
 
@@ -118,10 +117,10 @@ class ShortestPaths:
         Raises:
             Exception: If there is no data to save. The predecessors and distances must be computed first.
         """
-        filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
+        # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
         if self.predecessors is None:
             raise Exception("No data to save. First compute predecessors and distances")
-        with open(filepath, 'wb') as f:
+        with open(filename, 'wb') as f:
             pickle.dump(self.predecessors, f)
         
 
