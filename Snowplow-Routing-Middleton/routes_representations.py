@@ -11,7 +11,7 @@ class RouteStep:
         saltval (int): Indicates the amount of salt the vehicle had before traversing the arc. Useful for checking validity of solution
         next (RouteStep): The next step in the route
     """
-    def __init__(self, node1: int=None, node2: int=None, edge_id: int=None, deadheaded: bool=False, options: bool=False, saltval: int = 0, next: "RouteStep"=None):
+    def __init__(self, node1: int=None, node2: int=None, edge_id: int=None, deadheaded: bool=False, options: bool=False, saltval: int = 0, next: "RouteStep"=None, prev: "RouteStep"=None):
         self.node1 = node1
         self.node2 = node2
         self.edge_id = edge_id
@@ -19,6 +19,7 @@ class RouteStep:
         self.options = options
         self.saltval = saltval
         self.next = next
+        self.prev = prev
 
     def __str__(self):
         return f"{self.node1} --> {self.node2}. ({self.edge_id}) Deadhead: {self.deadheaded}. Had options: {self.options}. Salt value: {self.saltval}"
@@ -35,7 +36,7 @@ class RouteStep:
         """
         return (self.node1, self.node2, self.edge_id)
     
-class FullRoutes:
+class FullRoute:
     def __init__(self, root: RouteStep=None, length: int=0, cost: int=0):
         self.root = root
         self.length = length
@@ -47,3 +48,4 @@ class FullRoutes:
         while node is not None:
             print(node)
             node = node.next
+    

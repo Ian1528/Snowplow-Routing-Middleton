@@ -4,7 +4,7 @@ import numpy as np
 import networkx as nx
 from costs import routes_cost
 from shortest_paths import ShortestPaths
-from routestep import RouteStep
+from routes_representations import RouteStep
 from params import DEPOT
 
 def combine(routes1: list[list[RouteStep]], routes2: list[list[RouteStep]]) -> tuple[list[list[RouteStep]], int]:

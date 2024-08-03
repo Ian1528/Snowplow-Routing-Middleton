@@ -1,4 +1,4 @@
-from routestep import RouteStep
+from routes_representations import RouteStep
 from shortest_paths import ShortestPaths
 from params import DEPOT, POP_SIZE, BETA, N_ITER, K
 import numpy as np
