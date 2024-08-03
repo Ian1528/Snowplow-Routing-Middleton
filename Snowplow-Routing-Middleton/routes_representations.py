@@ -22,7 +22,15 @@ class RouteStep:
         self.prev = prev
 
     def __str__(self):
-        return f"{self.node1} --> {self.node2}. ({self.edge_id}) Deadhead: {self.deadheaded}. Had options: {self.options}. Salt value: {self.saltval}"
+        if self.next is None:
+            next_str = "None"
+        else:
+            next_str = f"({self.next.node1}, {self.next.node2}, {self.next.edge_id})"
+        if self.prev is None:
+            prev_str = "None"
+        else:
+            prev_str = f"({self.prev.node1}, {self.prev.node2}, {self.prev.edge_id})"
+        return f"{self.node1} --> {self.node2}. ({self.edge_id}) Deadhead: {self.deadheaded}. Had options: {self.options}. Salt value: {self.saltval}. Prev: {prev_str}. Next: {next_str}"
 
     def __repr__(self):
         return str(self)
