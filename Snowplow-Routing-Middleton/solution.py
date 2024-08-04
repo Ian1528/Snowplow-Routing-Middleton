@@ -11,7 +11,8 @@ class Solution:
         totalSimScore (int): The total similarity score of the solution.
     """
     
-    def __init__(self, routes: list[list[RouteStep]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
+    def __init__(self, routesteps: dict[tuple[int, int, int]: RouteStep], routes: list[list[RouteStep]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
+        self.routesteps = routesteps
         self.routes = routes
         self.cost = cost
         self.similarities = similarities
