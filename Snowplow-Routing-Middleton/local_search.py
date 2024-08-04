@@ -1,4 +1,4 @@
-from routes_representations import RouteStep
+from routes_representations import RouteStep, FullRoute
 from shortest_paths import ShortestPaths
 from solution import Solution
 from params import DEPOT, K
@@ -38,7 +38,7 @@ def relocate(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int,
         edge2 (tuple[int, int, int]): second edge
         indices1 (tuple[int, int], optional): the indices of the first edge. Defaults to None.
         indices2 (tuple[int, int], optional): indices of the second edge. Defaults to None.
-
+        threshold: threshold of acceptance. If the new cost is less than the old cost * threshold, the move is accepted
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
@@ -58,7 +58,7 @@ def relocate(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int,
     cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.get_edge())
 
     # if cost is better, proceed with the move. Otherwise, return the old routes
-    if cost_new > cost_old * threshold:
+    if cost_new < cost_old * threshold:
         # update all links
         step1.prev.next = step1.next
         step1.next.prev = step1.prev
@@ -116,7 +116,7 @@ def relocate_v2(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, i
     cost_old = sp.get_dist(step2.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step1.next.next.get_edge())
     cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.next.get_edge())
 
-    if cost_new > cost_old * threshold:
+    if cost_new < cost_old * threshold:
         step1.prev.next = step1.next.next
         step1.next.next.prev = step1.prev
 
@@ -169,7 +169,7 @@ def swap(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int
     cost_old = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
     cost_new = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
 
-    if cost_new > cost_old * threshold:
+    if cost_new < cost_old * threshold:
         step1.prev.next = step2
         step1.next.prev = step2
 
@@ -197,11 +197,11 @@ def swap(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int
     routes_new[indices2[0]][indices2[1]] = step1
 
     return routes_new
-
-def two_opt(routes_old: list[list[RouteStep]], edge1: tuple[int, int, int], edge2: tuple[int, int, int], indices1: tuple[int, int] = None, indices2: tuple[int, int] = None) -> list[list[RouteStep]]:
+def two_opt(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, indices1: tuple[int, int] = None, indices2: tuple[int, int] = None, threshold: float = 1) -> list[list[RouteStep]]:
     """
-    If the edges belong to the same route, reverses the order of traversal of the edges between the two indicated edges within the route.
-    If they belong to different routes, moves all edges after edge2 from the second route to the first, and moves all edges after edge1 to the second route.
+    Reverse the order of traversal of the edges between the two indicated edges within the route. This is a swap with a reversal
+    Example: two opt between b and f:
+    a->b->c->d->e->f->g becomes a->f->e->d->c->b->g
 
     Args:
         routes_old (list[list[RouteStep]]): old set of routes
@@ -218,6 +218,31 @@ def two_opt(routes_old: list[list[RouteStep]], edge1: tuple[int, int, int], edge
         indices1 = find_indice(routes_new, edge1)
     if indices2 == None:
         indices2 = find_indice(routes_new, edge2)
+
+    step1 = routesteps[edge1]
+    step2 = routesteps[edge2]
+
+    old_cost = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
+    new_cost = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
+    
+    if new_cost < old_cost * threshold:
+        # the edges are in the same route. Update all links
+        # reversing a linked list from step1 to step2. #TODO: Test this
+        curr_step = step1
+        temp = None
+        final = step2.next
+        while curr_step != final:
+            temp = curr_step.prev
+            curr_step.prev = curr_step.next
+            curr_step.next = temp
+            curr_step = curr_step.prev
+
+        return True
+    
+    return False
+
+
+
 
     # the edges are in the same route. Do the first version of 2-opt
     if indices1[0] == indices2[0]:
