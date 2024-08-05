@@ -7,6 +7,49 @@ import copy
 import random
 import networkx as nx
 
+def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], RouteStep]:
+    """
+    Converts a list of routes to a linked list representation. This is useful for local search operators
+
+    Args:
+        S (list[list[RouteStep]]): the list of routes
+
+    Returns:
+        dict[tuple[int, int, int]: RouteStep], RouteStep: a dictionary of edges to RouteStep objects and the head of the linked list
+    """
+    routesteps = dict()
+    head = None
+    # update links
+    for i in range(len(S)):
+        for j in range(len(S[i])):
+            step = S[i][j]
+            if j == 0 and i == 0:
+                head = step
+            step.prev = S[i][j-1] if j > 0 else (S[i-1][-1] if i > 0 else None)
+            step.next = S[i][j+1] if j < len(S[i])-1 else (S[i+1][0] if i < len(S)-1 else None)
+            
+            routesteps[step.get_edge()] = step
+    return routesteps, head
+def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
+    """
+    Converts a linked list representation to a list of routes. Useful for converting back after local search operators
+
+    Args:
+        head: Routestep. The routestep that is the head of the linked list (has no previous node)
+    Returns:
+        list[list[RouteStep]]: the list of routes
+    """
+    S = []
+    step = head
+    current_route = []
+    while step != None:
+        current_route.append(step)
+        if step.node2 == DEPOT:
+            S.append(current_route)
+            current_route = []
+        step = step.next
+    return S
+
 def find_indice(S: list[list[RouteStep]], edge: tuple[int, int, int]) -> tuple[int, int]:
     """
     Finds the corresponding indice of an edge in a route
@@ -28,7 +71,7 @@ def find_indice(S: list[list[RouteStep]], edge: tuple[int, int, int]) -> tuple[i
     
     raise Exception("Edge not found")
 
-def relocate(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, indices1: tuple[int, int] = None, indices2: tuple[int, int] = None, threshold: float = 1) -> list[list[RouteStep]]:
+def relocate(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
     Relocates edge1 after edge2 in the route. Returns the new set of modified routes
 
@@ -42,49 +85,33 @@ def relocate(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int,
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
-    routes_new = copy.deepcopy(routes_old)
-    # locate the indices if they aren't provided
-    if indices1 == None:
-        indices1 = find_indice(routes_new, edge1)
-    if indices2 == None:
-        indices2 = find_indice(routes_new, edge2)
-
-    step1 = routes_new[indices1[0]][indices1[1]]
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
 
-    # precompute the cost of the operation
-    cost_old = sp.get_dist(step2.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.get_edge()) 
-    cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.get_edge())
+    # avoid swapping end edges
+    try:
+        # precompute the cost of the operation
+        cost_old = sp.get_dist(step2.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.get_edge()) 
+        cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.get_edge())
 
-    # if cost is better, proceed with the move. Otherwise, return the old routes
-    if cost_new < cost_old * threshold:
-        # update all links
-        step1.prev.next = step1.next
-        step1.next.prev = step1.prev
+        # if cost is better, proceed with the move. Otherwise, return the old routes
+        if cost_new < cost_old * threshold:
+            # update all links
+            step1.prev.next = step1.next
+            step1.next.prev = step1.prev
 
-        step2.next.prev = step1
-        step1.next = step2.next
+            step2.next.prev = step1
+            step1.next = step2.next
 
-        step1.prev = step2
-        step2.next = step1
-        return True
-    
-    return False
+            step1.prev = step2
+            step2.next = step1
+            return True
+        
+        return False
+    except:
+        return False
 
-    sp.get_dist(step1.get_edge(), step2.get_edge()) 
-    # relocate: move edge 1 after edge 2
-    routes_new[indices1[0]].pop(indices1[1])
-    routes_new[indices2[0]] = routes_new[indices2[0]][:indices2[1]+1] + [step1] + routes_new[indices2[0]][indices2[1]+1:]
-    
-    # check if indices1 is empty
-    if len(routes_new[indices1[0]]) == 0:
-        routes_new.pop(indices1[0])
-
-    return routes_new
-
-
-def relocate_v2(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, indices1: tuple[int, int] = None, indices2: tuple[int, int] = None, threshold: float = 1) -> list[list[RouteStep]]:
+def relocate_v2(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
     Moves edge1 and the edge immediately following after edge2.
 
@@ -98,14 +125,6 @@ def relocate_v2(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, i
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
-    
-    routes_new = copy.deepcopy(routes_old)
-
-    if indices1 == None:
-        indices1 = find_indice(routes_new, edge1)
-    if indices2 == None:
-        indices2 = find_indice(routes_new, edge2)
-
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
 
@@ -113,40 +132,26 @@ def relocate_v2(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, i
     if step1.next == None:
         return False
 
-    cost_old = sp.get_dist(step2.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step1.next.next.get_edge())
-    cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.next.get_edge())
+    try:
+        cost_old = sp.get_dist(step2.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step1.next.next.get_edge())
+        cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.next.get_edge())
 
-    if cost_new < cost_old * threshold:
-        step1.prev.next = step1.next.next
-        step1.next.next.prev = step1.prev
+        if cost_new < cost_old * threshold:
+            step1.prev.next = step1.next.next
+            step1.next.next.prev = step1.prev
 
-        step2.next.prev = step1.next
-        step1.next.next = step2.next
+            step2.next.prev = step1.next
+            step1.next.next = step2.next
 
-        step1.prev = step2
-        step2.next = step1
+            step1.prev = step2
+            step2.next = step1
 
-        return True
-    return False
-    # no next edge exists
-    if indices1[1] == len(routes_new[indices1[0]])-1:
-        return routes_new
-    
-    step1 = routes_new[indices1[0]][indices1[1]]
-    step1_next = routes_new[indices1[0]][indices1[1]+1]
+            return True
+        return False
+    except:
+        return False
 
-    # relocate: move edge 1 after edge 2
-    routes_new[indices1[0]].pop(indices1[1])
-    routes_new[indices1[0]].pop(indices1[1])
-    routes_new[indices2[0]] = routes_new[indices2[0]][:indices2[1]+1] + [step1, step1_next] + routes_new[indices2[0]][indices2[1]+1:]
-
-    # check if indices1 is empty
-    if len(routes_new[indices1[0]]) == 0:
-        routes_new.pop(indices1[0])
-
-    return routes_new
-
-def swap(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, indices1: tuple[int, int] = None, indices2: tuple[int, int] = None, threshold: float = 1) -> list[list[RouteStep]]:
+def swap(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
     Swaps edge1 with edge2.
 
@@ -160,44 +165,31 @@ def swap(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
-    
-    routes_new = copy.deepcopy(routes_old)
-
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
+    try:
+        cost_old = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
+        cost_new = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
 
-    cost_old = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
-    cost_new = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
+        if cost_new < cost_old * threshold:
+            step1.prev.next = step2
+            step1.next.prev = step2
 
-    if cost_new < cost_old * threshold:
-        step1.prev.next = step2
-        step1.next.prev = step2
+            step2.prev.next = step1
+            step2.next.prev = step1
 
-        step2.prev.next = step1
-        step2.next.prev = step1
+            temp = step1.prev
+            step1.prev = step2.prev
+            step2.prev = temp
 
-        temp = step1.prev
-        step1.prev = step2.prev
-        step2.prev = temp
-
-        temp = step1.next
-        step1.next = step2.next
-        step2.next = temp
-        return True
-    return False
-    if indices1 == None:
-        indices1 = find_indice(routes_new, edge1)
-    if indices2 == None:
-        indices2 = find_indice(routes_new, edge2)
-
-    step1 = routes_new[indices1[0]][indices1[1]]
-    step2 = routes_new[indices2[0]][indices2[1]]
-
-    routes_new[indices1[0]][indices1[1]] = step2
-    routes_new[indices2[0]][indices2[1]] = step1
-
-    return routes_new
-def two_opt(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, indices1: tuple[int, int] = None, indices2: tuple[int, int] = None, threshold: float = 1) -> list[list[RouteStep]]:
+            temp = step1.next
+            step1.next = step2.next
+            step2.next = temp
+            return True
+        return False
+    except:
+        return False
+def two_opt(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
     Reverse the order of traversal of the edges between the two indicated edges within the route. This is a swap with a reversal
     Example: two opt between b and f:
@@ -213,55 +205,30 @@ def two_opt(routes_old: list[list[RouteStep]], routesteps: dict[tuple[int, int, 
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
-    routes_new = copy.deepcopy(routes_old)
-    if indices1 == None:
-        indices1 = find_indice(routes_new, edge1)
-    if indices2 == None:
-        indices2 = find_indice(routes_new, edge2)
-
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
-
-    old_cost = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
-    new_cost = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
-    
-    if new_cost < old_cost * threshold:
-        # the edges are in the same route. Update all links
-        # reversing a linked list from step1 to step2. #TODO: Test this
-        curr_step = step1
-        temp = None
-        final = step2.next
-        while curr_step != final:
-            temp = curr_step.prev
-            curr_step.prev = curr_step.next
-            curr_step.next = temp
-            curr_step = curr_step.prev
-
-        return True
-    
-    return False
-
-
-
-
-    # the edges are in the same route. Do the first version of 2-opt
-    if indices1[0] == indices2[0]:
-        route = routes_new[indices1[0]]
-        route = route[0:indices1[1]] + route[indices2[1]:indices1[1]-1:-1] + route[indices2[1]+1:]
-    else:
-        # the edges are in different routes. Do the second version of 2-opt
-        route1 = routes_new[indices1[0]]
-        route2 = routes_new[indices2[0]]
-
-        tempRoute = route1[:indices1[1]+1] + route2[indices2[1]+1:]
-        route2 = route2[:indices2[1]+1] + route1[indices1[1]+1:]
-        route1 = tempRoute
+    try:
+        old_cost = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge())
+        new_cost = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
         
-        if len(route1) == 0:
-            routes_new.pop(indices1[0])
-        if len(route2) == 0:
-            routes_new.pop(indices2[0])
-    return routes_new
+        if new_cost < old_cost * threshold:
+            # the edges are in the same route. Update all links
+            # reversing a linked list from step1 to step2. #TODO: Test this
+            curr_step = step1
+            temp = None
+            final = step2.next
+            while curr_step != final:
+                temp = curr_step.prev
+                curr_step.prev = curr_step.next
+                curr_step.next = temp
+                curr_step = curr_step.prev
+
+            return True
+        
+        return False
+    
+    except:
+        return False
 
 def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], K: int=3) -> Solution:
     """
@@ -280,10 +247,12 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     """
     ALL_EDGES = [step.get_edge() for route in S.routes for step in route if step.get_edge() != (DEPOT,DEPOT,0)]
     operators = [relocate, relocate_v2, swap, two_opt]
+    
+    S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
 
+    routestep_dict, head = individual_to_linked_list(S_new.routesteps)
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
-    S_best = S
 
     nearest_neighbors = sp.compute_nearest_neighbors()
 
@@ -295,8 +264,8 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges:
                     continue
                 
-                S_curr_routes = operator(S_best.routes, edge, neighboring_edge)
-                curr_cost = routes_cost(G, sp, S_curr_routes)
-                if curr_cost < S_best.cost:
-                    S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
-    return S_best
+                modified: bool = operator(routestep_dict, edge, neighboring_edge, sp, threshold=1)
+                # curr_cost = routes_cost(G, sp, S_curr_routes)
+                # if curr_cost < S_best.cost:
+                #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
+    return S_new
