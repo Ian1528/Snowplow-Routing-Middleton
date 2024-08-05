@@ -7,6 +7,68 @@ import copy
 import random
 import networkx as nx
 
+def swap_steps(x: RouteStep, y: RouteStep):
+    """
+    Swaps two routesteps
+
+    Args:
+        x (RouteStep): first routestep
+        y (RouteStep): second routestep
+    """
+    xNext = x.next
+    xPrev = x.prev
+    yNext = y.next
+    yPrev = y.prev
+
+    if xPrev:
+        xPrev.next = y
+    if xNext:
+        xNext.prev = y
+    if yPrev:
+        yPrev.next = x
+    if yNext:
+        yNext.prev = x
+
+    # case 1: x is right before y
+    if xNext == y:
+        x.next = yNext
+        x.prev = y
+        y.next = x
+        y.prev = xPrev
+
+    
+    # case 2: y is right before x
+    elif yNext == x:
+        x.next = y
+        x.prev = yPrev
+        y.next = xNext
+        y.prev = x
+
+    # case 3: non-adjacent
+    else:
+        x.prev = yPrev
+        x.next = yNext
+        y.prev = xPrev
+        y.next = xNext
+
+def insert(x: RouteStep, y: RouteStep):
+    """
+    Inserts step x after step y
+
+    Args:
+        x (RouteStep): step to be inserted
+        y (RouteStep): step to insert after
+    """
+    if x.prev:
+        x.prev.next = x.next
+    if x.next:
+        x.next.prev = x.prev
+    
+    if y.next:
+        y.next.prev = x
+    x.prev = y
+    x.next = y.next
+    y.next = x
 def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], RouteStep]:
     """
     Converts a list of routes to a linked list representation. This is useful for local search operators
@@ -48,6 +110,7 @@ def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
             S.append(current_route)
             current_route = []
         step = step.next
+    S.append(current_route)
     return S
 
 def find_indice(S: list[list[RouteStep]], edge: tuple[int, int, int]) -> tuple[int, int]:
@@ -96,18 +159,11 @@ def relocate(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int
 
         # if cost is better, proceed with the move. Otherwise, return the old routes
         if cost_new < cost_old * threshold:
-            # update all links
-            step1.prev.next = step1.next
-            step1.next.prev = step1.prev
-
-            step2.next.prev = step1
-            step1.next = step2.next
-
-            step1.prev = step2
-            step2.next = step1
+            insert(step1, step2)
             return True
         
         return False
+    
     except:
         return False
 
@@ -128,8 +184,9 @@ def relocate_v2(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
 
+    step1Next = step1.next
     # no next edge exists
-    if step1.next == None:
+    if step1Next == None:
         return False
 
     try:
@@ -137,15 +194,8 @@ def relocate_v2(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[
         cost_new = sp.get_dist(step2.get_edge(), step1.get_edge()) + sp.get_dist(step1.next.get_edge(), step2.next.get_edge()) + sp.get_dist(step1.prev.get_edge(), step1.next.next.get_edge())
 
         if cost_new < cost_old * threshold:
-            step1.prev.next = step1.next.next
-            step1.next.next.prev = step1.prev
-
-            step2.next.prev = step1.next
-            step1.next.next = step2.next
-
-            step1.prev = step2
-            step2.next = step1
-
+            insert(step1, step2)
+            insert(step1Next, step1)
             return True
         return False
     except:
@@ -172,19 +222,7 @@ def swap(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, in
         cost_new = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.get_edge(), step1.next.get_edge()) + sp.get_dist(step2.prev.get_edge(), step1.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge())
 
         if cost_new < cost_old * threshold:
-            step1.prev.next = step2
-            step1.next.prev = step2
-
-            step2.prev.next = step1
-            step2.next.prev = step1
-
-            temp = step1.prev
-            step1.prev = step2.prev
-            step2.prev = temp
-
-            temp = step1.next
-            step1.next = step2.next
-            step2.next = temp
+            swap_steps(step1, step2)
             return True
         return False
     except:
@@ -250,7 +288,10 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     
     S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
 
-    routestep_dict, head = individual_to_linked_list(S_new.routesteps)
+    routestep_dict, head = individual_to_linked_list(S_new.routes)
+    print("Converted to linked list")
+    print("Routestep dict is ", routestep_dict)
+    print("Head is ", head)
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
 
@@ -264,8 +305,11 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges:
                     continue
                 
-                modified: bool = operator(routestep_dict, edge, neighboring_edge, sp, threshold=1)
+                modified: bool = swap(routestep_dict, edge, neighboring_edge, sp, threshold=1) #TODO: change back to operator
+                # if modified:
+                #     print("Modified")
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
                 # if curr_cost < S_best.cost:
                 #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
+    S_new.routes = linked_list_to_individual(head)
     return S_new
