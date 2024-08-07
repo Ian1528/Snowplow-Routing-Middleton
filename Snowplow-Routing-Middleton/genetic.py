@@ -51,11 +51,17 @@ def similarity(S1: Solution, S2: Solution) -> int:
                 if (S2.routes[i][j], S2.routes[i][j+1]) in edge_sequences:
                     intersections += 1
                 count2 += 1
-                
         count2 += 1
-
-        if (S2.routes[i][j], (DEPOT, DEPOT, 0)) in edge_sequences:
-            intersections += 1
+        try:
+            if (S2.routes[i][j], (DEPOT, DEPOT, 0)) in edge_sequences:
+                intersections += 1
+        except:
+            print(S2.routes)
+            for route in S2.routes:
+                for step in route:
+                    print(step)
+                print("****")
+            raise ValueError("Error in similarity function")
     return min(count1, count2) - intersections
     
 
