@@ -106,11 +106,13 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
     sol_best = None
     required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
 
+    nearest_neighbors = sp.compute_nearest_neighbors()
+
     for i in range(POP_SIZE):
         print("initial generation", i)
         r, rreq = route_generation(G, sp)
         new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq), 0)
-        new_sol = local_improve(new_sol, G, sp, required_edges, K)
+        new_sol = local_improve(new_sol, G, sp, nearest_neighbors, required_edges, K)
         
         if i == 0:
             sol_best = new_sol
@@ -138,7 +140,7 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
 
         new_cost = routes_cost(G, sp, routes0)
         new_sol = Solution(routes0, dict(), new_cost, 0)
-        new_sol = local_improve(new_sol, G, sp, required_edges, K)
+        new_sol = local_improve(new_sol, G, sp, nearest_neighbors, required_edges, K)
 
         # update similarities
         for i in range(len(population)):

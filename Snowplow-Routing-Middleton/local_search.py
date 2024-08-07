@@ -172,7 +172,7 @@ def two_opt(routes_old: list[list[RouteStep]], edge1: tuple[int, int, int], edge
             routes_new.pop(indices2[0])
     return routes_new
 
-def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], K: int=3) -> Solution:
+def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, nearest_neighbors: dict, required_edges: set[tuple[int, int, int]], K: int=3) -> Solution:
     """
     Takes a current solution and runs the local improvement algorithm. First, the four local search operators are randomly shuffled.
     Then, for the k-nearest neighbors of each edge, every operator is applied and accepted if it reduces the route cost.
@@ -193,8 +193,6 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
     S_best = S
-
-    nearest_neighbors = sp.compute_nearest_neighbors()
 
     for operator in operators:
         for edge in ALL_EDGES:
