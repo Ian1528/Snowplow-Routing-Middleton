@@ -7,9 +7,6 @@ from crossover import apply_crossover
 from genetic import run_genetic
 
 
-G = None
-G_DUAL = None
-
 def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=False) -> None:
     """
     Creates an instance of the graph and its dual graph based on user input.
@@ -21,10 +18,6 @@ def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=F
     Returns:
         None
     """
-
-    global G
-    global G_DUAL
-
     # 1. Generate Graphs
     if take_input:
         instance = input("Enter the instance name (smalltoy, smallstreets, fullstreets): ")
@@ -58,26 +51,29 @@ def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=F
         else:
             G_DUAL = dual_graphs.create_dual_toy(G, False, True)
 
-# 1. Create primal and dual graphs
-create_instance(("smalltoy", "genetic"))
-# 2. Generate shortest paths model
-shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
-# 3. Generate initial routes
-r1, rreq1 = construction.route_generation(G, shortest_paths)
-r2, rreq2 = construction.route_generation(G, shortest_paths)
+    return G, G_DUAL
 
-# 4. Route Improvement Algorithms
-sol = run_genetic(G, shortest_paths)
+if __name__ == "__main__":
+    # 1. Create primal and dual graphs
+    G, G_DUAL = create_instance(("smalltoy", "genetic"))
+    # 2. Generate shortest paths model
+    shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
+    # 3. Generate initial routes
+    r1, rreq1 = construction.route_generation(G, shortest_paths)
+    r2, rreq2 = construction.route_generation(G, shortest_paths)
 
-for route in sol.routes:
-    for edge in route:
-        print(edge)
-    print("***")
+    # 4. Route Improvement Algorithms
+    sol = run_genetic(G, shortest_paths)
+
+    for route in sol.routes:
+        for edge in route:
+            print(edge)
+        print("***")
 
 
-# 5. Plot final routes
-G_graph = plotting.add_order_attribute(G, sol.routes)
-plotting.draw_labeled_multigraph(G_graph, 'order')
+    # 5. Plot final routes
+    G_graph = plotting.add_order_attribute(G, sol.routes)
+    plotting.draw_labeled_multigraph(G_graph, 'order')
 
-print("DONE")
-print("Routes cost", sol.cost)
+    print("DONE")
+    print("Routes cost", sol.cost)

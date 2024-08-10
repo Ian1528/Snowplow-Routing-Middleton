@@ -7,19 +7,6 @@ import copy
 import random
 import networkx as nx
 
-class SubRoute:
-    """
-    Represents a subroute in a route. A subroute is a sequence of routesteps between depot visits.
-
-    Attributes:
-        steps (list[RouteStep]): list of steps in the subroute
-        cost (float): cost of the subroute
-    """
-    def __init__(self, head: RouteStep, tail: RouteStep, route_id: int):
-        self.head = head
-        self.tail = tail
-        self.route_id = route_id
-
 def swap_steps(x: RouteStep, y: RouteStep):
     """
     Swaps two routesteps
@@ -66,6 +53,12 @@ def swap_steps(x: RouteStep, y: RouteStep):
     
     # update the route_id of the steps
     x.route_id, y.route_id = y.route_id, x.route_id
+    x.is_route_end, y.is_route_end = y.is_route_end, x.is_route_end
+
+    if x.node2 == DEPOT:
+        x.is_route_end = True
+    if y.node2 == DEPOT:
+        y.is_route_end = True
 
 def insert(x: RouteStep, y: RouteStep):
     """
@@ -75,19 +68,32 @@ def insert(x: RouteStep, y: RouteStep):
         x (RouteStep): step to be inserted
         y (RouteStep): step to insert after
     """
-    if x.prev:
-        x.prev.next = x.next
-    if x.next:
-        x.next.prev = x.prev
-    
-    if y.next:
-        y.next.prev = x
+    x.prev.next = x.next
+    x.next.prev = x.prev
+
+    # update route endpoints
+    if x.is_route_end:
+        x.prev.is_route_end = True
+
+    if y.is_route_end:
+        x.is_route_end = True
+        y.is_route_end = False
+    else:
+        x.is_route_end = False
+
+    y.next.prev = x
     x.prev = y
     x.next = y.next
     y.next = x
 
     # update the route id of the steps
     x.route_id = y.route_id
+
+    if x.node2 == DEPOT:
+        x.is_route_end = True
+    if y.node2 == DEPOT:
+        y.is_route_end = True
+
 
 def reverse_list(n1: RouteStep, n2: RouteStep):
     """
@@ -102,7 +108,11 @@ def reverse_list(n1: RouteStep, n2: RouteStep):
     """
     if n1 == n2:
         return
-
+    
+    if n2.is_route_end:
+        n2.is_route_end = False
+        n1.is_route_end = True
+    
     original_prev = n1.prev
     original_next = n2.next
     current = n1
@@ -120,14 +130,20 @@ def reverse_list(n1: RouteStep, n2: RouteStep):
         else:
             current.next = old_prev
             current.prev = old_next
-
+        if old_next == None:
+            print("NOO")
         current = old_next
     
     n2.prev = original_prev
     original_prev.next = n2
 
-    n1.next = original_next
+    n1.next = original_next 
     original_next.prev = n1
+
+    if n1.node2 == DEPOT:
+        n1.is_route_end = True
+    if n2.node2 == DEPOT:
+        n2.is_route_end = True
 
 def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], RouteStep]:
     """
@@ -140,45 +156,47 @@ def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int,
         dict[tuple[int, int, int]: RouteStep], RouteStep: a dictionary of edges to RouteStep objects and the head of the linked list
     """
     routesteps = dict()
-    all_routes: list[SubRoute] = []
+    head = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1)
+    tail = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1)
     # update links
     for i in range(len(S)):
-        # create a new subroute with dummy heads and tails
-        subroute_head = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, i)
-        subroute_tail = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, i)
-        new_subroute = SubRoute(subroute_head, subroute_tail, i)
-
         for j in range(len(S[i])):
             step = S[i][j]
-            step.prev = S[i][j-1] if j > 0 else subroute_head
-            step.next = S[i][j+1] if j < len(S[i])-1 else subroute_tail
-            step.route_id = i
 
-            # update the head and tail of the subroute
-            if j == 0:
-                subroute_head.next = step
+            if i == 0 and j == 0:
+                head.next = step
+            if i == len(S)-1 and j == len(S[i])-1:
+                tail.prev = step
+
             if j == len(S[i])-1:
-                subroute_tail.prev = step
-                subroute_tail.saltval = step.saltval
+                step.is_route_end = True
             
+            step.prev = S[i][j-1] if j > 0 else (S[i-1][-1] if i > 0 else head)
+            step.next = S[i][j+1] if j < len(S[i])-1 else (S[i+1][0] if i < len(S)-1 else tail)
             routesteps[step.get_edge()] = step
+    return routesteps, head
 
-        all_routes.append(new_subroute)
+def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
+    full_routes = []
+    curr_route = []
+    step = head.next
 
-    return routesteps, all_routes
+    while step != None:
+        if step.prev.get_edge() == (DEPOT, DEPOT, 0):
+            step.prev = None
+        if step.next.get_edge() == (DEPOT, DEPOT, 0):
+            step.next = None
 
-def linked_list_to_individual(all_routes: list[SubRoute]) -> list[list[RouteStep]]:
-    S = []
-    for route in all_routes:
-        current_route = []
-        step = route.head.next
-        # print("Route head: ", route.head, "\nRoute tail: ", route.tail)
-        while step != route.tail:
-            current_route.append(step)
-            step = step.next
-        if len(current_route) > 0:
-            S.append(current_route)
-    return S
+        curr_route.append(step)
+
+        if step.node2 == DEPOT:
+            full_routes.append(curr_route)
+            curr_route = []
+        step = step.next
+
+    if len(curr_route) > 0:
+        full_routes.append(curr_route)
+    return full_routes
 
 def find_indice(S: list[list[RouteStep]], edge: tuple[int, int, int]) -> tuple[int, int]:
     """
@@ -233,7 +251,6 @@ def relocate(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int
         if cost_new < cost_old * threshold:
             insert(step2, step1)
             return True
-        
         return False
     
     except:
@@ -298,7 +315,60 @@ def swap(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, in
         return False
     except:
         return False
-    
+
+def find_route_end(step: RouteStep) -> RouteStep:
+    """
+    Finds the last step in the route that the step is a part of
+
+    Args:
+        step (RouteStep): the step
+
+    Returns:
+        RouteStep: the last step in the route
+    """
+    curr_step = step
+    while curr_step.is_route_end == False:
+        curr_step = curr_step.next
+    return curr_step
+
+def print_linked_list(head: RouteStep):
+    """
+    Prints the linked list
+
+    Args:
+        head (RouteStep): the head of the linked list
+    """
+    curr = head
+    while curr != None:
+        print(curr)
+        curr = curr.next
+
+def find_route_end_two_steps(step1: RouteStep, step2: RouteStep) -> tuple[RouteStep, RouteStep] | tuple[None, None]:
+    """
+    Finds the last step in the route that the both steps is a part of, and returns none if step2 comes before step1 in the same route.
+    Useful to save time in two-opt intra-route
+
+    Args:
+        step (RouteStep): the step
+
+    Returns:
+        RouteStep: the last step in the route, or None if step2 comes before step1 in the same route
+    """
+    curr_step2 = step2
+
+    while curr_step2.is_route_end == False:
+        if curr_step2 == step1:
+            return None, None
+        curr_step2 = curr_step2.next
+    if curr_step2 == step1:
+        return None, None
+    curr_step1 = step1
+    # somehow, the tail is getting moved when it should never be touched.
+    while curr_step1.is_route_end == False:
+        curr_step1 = curr_step1.next
+
+    return curr_step1, curr_step2
+
 def two_opt_intra_route(step1, step2, sp: ShortestPaths, threshold: float) -> bool:
     """
     Two-opt operator for steps in the same route
@@ -311,23 +381,36 @@ def two_opt_intra_route(step1, step2, sp: ShortestPaths, threshold: float) -> bo
         list[list[RouteStep]]: new set of modified routes
     """
 
-    # make sure that step1 is before step2
-    curr_step = step1
-    while curr_step != step2:
-        if curr_step == None:
-            return False
-        curr_step = curr_step.next
+    # make sure that step1 is before step2. shouldn't be necessary with the find_route_end_two_steps function
+    # curr_step = step1
+    # while curr_step != step2:
+    #     if curr_step == None:
+    #         return False
+    #     curr_step = curr_step.next
     
     old_cost = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.get_edge(), step2.next.get_edge()) #+ sp.get_dist(step2.prev.get_edge(), step2.get_edge()) + sp.get_dist(step1.get_edge(), step1.next.get_edge())
     new_cost = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step1.get_edge(), step2.next.get_edge()) #+ sp.get_dist(step2.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.get_edge(), step1.next.get_edge())
 
     if new_cost < old_cost * threshold:
         # reverse the sequence of steps between step1 and step2
+        print("Route from step1: ")
+        print_linked_list(step1)
+        print("Route from step2: ")
+        print_linked_list(step2)
+        print()
+
         reverse_list(step1, step2)
+
+        print("After reversal route from step2:")
+        print_linked_list(step2)
+        print("After reversal route from step1:")
+        print_linked_list(step1)
+        print()
+        print()
         return True
     return False
 
-def two_opt_inter_route(step1, step2, sp: ShortestPaths, threshold: float) -> bool:
+def two_opt_inter_route(step1, step2, step1end, step2end, sp: ShortestPaths, threshold: float) -> bool:
     """
     Two-opt operator for steps in different routes
 
@@ -338,7 +421,6 @@ def two_opt_inter_route(step1, step2, sp: ShortestPaths, threshold: float) -> bo
     Returns:
         list[list[RouteStep]]: new set of modified routes
     """
-    return
     old_cost = sp.get_dist(step1.prev.get_edge(), step1.get_edge()) + sp.get_dist(step2.prev.get_edge(), step2.get_edge())
     new_cost = sp.get_dist(step1.prev.get_edge(), step2.get_edge()) + sp.get_dist(step2.prev.get_edge(), step1.get_edge())
     
@@ -350,17 +432,11 @@ def two_opt_inter_route(step1, step2, sp: ShortestPaths, threshold: float) -> bo
         step1.next, step2.next = step2.next, step1.next
         step1.next.prev, step2.next.prev = step1, step2
 
-        # update the route_ids
-        curr_step = step1
-        while curr_step != None:
-            curr_step.route_id = step1.prev.route_id
-            curr_step = curr_step.next
-        
-        curr_step = step2
-        while curr_step != None:
-            curr_step.route_id = step2.prev.route_id
-            curr_step = curr_step.next
-        
+        # swap the nexts of the ending points of the routes
+        old_step1next = step1end.next
+        old_step2next = step2end.next
+
+        step1end.next, step2end.next = old_step2next, old_step1next
         return True
     return False
 def two_opt(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
@@ -386,12 +462,30 @@ def two_opt(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int,
     step1 = routesteps[edge1]
     step2 = routesteps[edge2]
 
-    # also need to update all of the route_ids of the subsequent steps
-    if step1.route_id == step2.route_id:
+    step1end, step2end = find_route_end_two_steps(step1, step2)
+
+    # None check
+    if step1end == None:
+        return False
+
+    # print("Route from step1: ")
+    # print_linked_list(step1)
+    # print("Route from step2: ")
+    # print_linked_list(step2)
+    # print()
+    # print()
+    # if the endsteps are the very tail, we want the previous step
+    if step1end.next == None:
+        step1end = step1end.prev
+    if step2end.next == None:
+        step2end = step2end.prev
+        
+    if step1end == step2end:
         return two_opt_intra_route(step1, step2, sp, threshold)
     else:
-        return two_opt_inter_route(step1, step2, sp, threshold)    
-
+        return
+        return two_opt_inter_route(step1, step2, step1end, step2end, sp, threshold)
+    
 def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], K: int=3, threshold: float = 1) -> Solution:
     """
     Takes a current solution and runs the local improvement algorithm. First, the four local search operators are randomly shuffled.
@@ -418,14 +512,13 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     random.shuffle(operators)
 
     nearest_neighbors = sp.compute_nearest_neighbors()
-
     for operator in operators:
         for edge in ALL_EDGES:
             for neighboring_edge in nearest_neighbors[edge][1:K+1]:
                 neighboring_edge = tuple(neighboring_edge)
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
-                modified: bool = operator(routestep_dict, edge, neighboring_edge, sp, threshold=threshold) #TODO: change back to operator
+                modified: bool = two_opt(routestep_dict, edge, neighboring_edge, sp, threshold=threshold) #TODO: change back to operator
                 # if modified:
                 #     print("Modified")
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
@@ -433,3 +526,27 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
     S_new.routes = linked_list_to_individual(all_routes_original)
     return S_new
+
+
+if __name__ == "__main__":
+    from main import create_instance
+    from shortest_paths import ShortestPaths
+    from construction import route_generation
+    from solution import Solution
+    G, G_DUAL = create_instance(("smalltoy", "genetic"))
+    shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
+    r, rreq = route_generation(G, shortest_paths)
+    required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
+    S_first = Solution(rreq, dict(), routes_cost(G, shortest_paths, rreq), 0)
+    for route in S_first.routes:
+        for step in route:
+            print(step)
+    print("*********************")
+
+    S_new = local_improve(S_first, G, shortest_paths, required_edges, K=3, threshold=2)
+    print("New routes:")
+    for route in S_new.routes:
+        for step in route:
+            print(step)
+        print("_____")
+
