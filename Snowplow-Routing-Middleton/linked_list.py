@@ -6,28 +6,60 @@ class Node:
 
     def __str__(self):
         if self.prev is None:
-            prev_str = "None"
+            prev_str = "NONE"
         else:
             prev_str = self.prev.get_data()
         if self.next is None:
-            next_str = "None"
+            next_str = "NONE"
         else:
             next_str = self.next.get_data()
     
         return str(self.data) + " Prev is " + str(prev_str) + " Next is " + str(next_str)
     def __repr__(self) -> str:
-        return str(self.data)
+        return self.__str__(self)
     
     def get_data(self):
         return self.data
+
+def two_opt_inter(step1: Node, step2: Node, step1end, step2end):
+    old_step1end_next = step1end.next
+    old_step2end_next = step2end.next
+
+    step1prev = step1.prev
+    step2prev = step2.prev
+
+    step1.prev.next, step2.prev.next = step2, step1
+
+        
+    # handle edge cases where one step is end of one route, other is start of the next
+    if step2prev == step1end:
+        step1.prev = step2end
+        step2end.next = step1
+        step1end.next = old_step2end_next
+        old_step2end_next.prev = step1end
+    else:
+        step1.prev = step2prev
+        step2end.next = old_step1end_next
+        old_step1end_next.prev = step2end
     
+    if step1prev == step2end:
+        step2.prev = step1end
+        step1end.next = step2
+        step2end.next = old_step1end_next
+        old_step1end_next.prev = step2end
+    else:
+        step2.prev = step1prev
+        step1end.next = old_step2end_next
+        old_step2end_next.prev = step1end
+    
+
 def reverse_list(n1: Node, n2: Node):
     """
-    Reverses the linked list between node1 and node2, inclusive. Node 1 comes before node 2.
-    Assumes that node1 and node2 aren't the head or tail of the linked list. Never touching the dummy heads and tails
+    Reverses the linked list between node1A and node2A, inclusive. Node 1 comes before node 2.
+    Assumes that node1A and node2A aren't the headA or tailA of the linked list. Never touching the dummy heads and tailAs
     Args:
-        node1 (RouteStep): The first routestep.
-        node2 (RouteStep): The second routestep.
+        node1A (RouteStep): The first routestep.
+        node2A (RouteStep): The second routestep.
 
     Returns:
         None
@@ -60,40 +92,76 @@ def reverse_list(n1: Node, n2: Node):
     n1.next = original_next
     original_next.prev = n1
 
-head = Node(0)
-node1 = Node(1)
-node2 = Node(2)
-node3 = Node(3)
-node4 = Node(4)
-node5 = Node(5)
-node6 = Node(6)
-tail = Node(0)
+# create list A
+headA = Node("0")
+node1A = Node("A")
+node2A = Node("B")
+node3A = Node("C")
+node4A = Node("D")
+node5A = Node("E")
+node6A = Node("F")
 
-head.next = node1
-node1.prev = head
-node1.next = node2
-node2.prev = node1
-node2.next = node3
-node3.prev = node2
-node3.next = node4
-node4.prev = node3
-node4.next = node5
-node5.prev = node4
-node5.next = node6
-node6.prev = node5
-node6.next = tail
-tail.prev = node6
 
-current = head
+# create list B
+node1B = Node("G")
+node2B = Node("H")
+node3B = Node("I")
+node4B = Node("J")
+node5B = Node("K")
+node6B = Node("L")
+tailB = Node("0")
+
+
+headA.next = node1A
+node1A.prev = headA
+node1A.next = node2A
+node2A.prev = node1A
+node2A.next = node3A
+node3A.prev = node2A
+node3A.next = node4A
+node4A.prev = node3A
+node4A.next = node5A
+node5A.prev = node4A
+node5A.next = node6A
+node6A.prev = node5A
+node6A.next = node1B
+
+
+node1B.prev = node6A
+node1B.next = node2B
+node2B.prev = node1B
+node2B.next = node3B
+node3B.prev = node2B
+node3B.next = node4B
+node4B.prev = node3B
+node4B.next = node5B
+node5B.prev = node4B
+node5B.next = node6B
+node6B.prev = node5B
+node6B.next = tailB
+tailB.prev = node6B
+
+
+# current = headA
+# while current is not None:
+#     print(current)
+#     current = current.next
+
+# print()
+
+# current = headB
+# while current is not None:
+#     print(current)
+#     current = current.next
+
+
+two_opt_inter(node2A, node3B, node6A, node6B)
+# two_opt_inter(node1B, node3A, node6B, node6A)
+current = headA.next
 while current is not None:
     print(current)
     current = current.next
 
-reverse_list(node1, node2)
-print("****")
+print()
 
-current = head
-while current is not None:
-    print(current)
-    current = current.next
 

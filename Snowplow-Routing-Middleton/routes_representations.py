@@ -22,7 +22,7 @@ class RouteStep:
         self.prev = prev
         self.route_id = route_id
         self.is_route_end = is_route_end
-        
+
     def __str__(self):
         if self.next is None:
             next_str = "None"
@@ -32,7 +32,7 @@ class RouteStep:
             prev_str = "None"
         else:
             prev_str = f"({self.prev.node1}, {self.prev.node2}, {self.prev.edge_id})"
-        return f"{self.node1} --> {self.node2}. ({self.edge_id}) Deadhead: {self.deadheaded}. Had options: {self.options}. Salt value: {self.saltval}. Prev: {prev_str}. Next: {next_str}"
+        return f"{self.node1} --> {self.node2}. ({self.edge_id}) Salt value: {self.saltval}. Prev: {prev_str}. Next: {next_str}. Route end: {self.is_route_end}"
 
     def __repr__(self):
         return str(self)
