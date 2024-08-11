@@ -55,31 +55,6 @@ def swap_steps(x: RouteStep, y: RouteStep):
     x.route_id, y.route_id = y.route_id, x.route_id
     x.is_route_end, y.is_route_end = y.is_route_end, x.is_route_end
 
-    # if x.is_route_end:
-    #     if not y.is_route_end:
-    #         x.is_route_end = False
-    #     y.is_route_end = True
-
-    # if y.is_route_end:
-    #     if not x.is_route_end:
-    #         y.is_route_end = False
-    #     x.is_route_end = True
-    
-    # if x.node2 == DEPOT:
-    #     x.is_route_end = True
-    # if y.node2 == DEPOT:
-    #     y.is_route_end = True
-
-    # if x.node1 == DEPOT and x.prev != None and x.prev.get_edge() != (DEPOT, DEPOT, 0):
-    #     x.prev.is_route_end = True
-    #     if y.node1 != DEPOT:
-    #         y.prev.is_route_end = False
-    
-    # if y.node1 == DEPOT and y.prev != None and y.prev.get_edge() != (DEPOT, DEPOT, 0):
-    #     y.prev.is_route_end = True
-    #     if x.node1 != DEPOT:
-    #         x.prev.is_route_end = False
-
 
 def insert(x: RouteStep, y: RouteStep):
     """
@@ -107,15 +82,6 @@ def insert(x: RouteStep, y: RouteStep):
     x.is_route_end = y.is_route_end
     y.is_route_end = False
 
-    # if x.node2 == DEPOT:
-    #     x.is_route_end = True
-    # if y.node2 == DEPOT:
-    #     y.is_route_end = True
-
-    # if x.node1 == DEPOT:
-    #     y.is_route_end = True
-    #     if oldXprev.next != None and oldXprev.next.get_edge() != (DEPOT, DEPOT, 0):
-    #         oldXprev.is_route_end = False
 
 
 def reverse_list(n1: RouteStep, n2: RouteStep):
@@ -165,12 +131,6 @@ def reverse_list(n1: RouteStep, n2: RouteStep):
         n2.is_route_end = False
         n1.is_route_end = True
 
-    # if n1.node2 == DEPOT:
-    #     n1.is_route_end = True
-    # if n2.node2 == DEPOT:
-    #     n2.is_route_end = True
-debugging_list = []
-
 def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], RouteStep]:
     """
     Converts a list of routes to a linked list representation. This is useful for local search operators
@@ -181,13 +141,9 @@ def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int,
     Returns:
         dict[tuple[int, int, int]: RouteStep], RouteStep: a dictionary of edges to RouteStep objects and the head of the linked list
     """
-    global debugging_list
-    debugging_list = []
     routesteps = dict()
     head = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1)
     tail = RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1)
-    debugging_list.append(head)
-    debugging_list.append(tail)
     # update links
     for i in range(len(S)):
         for j in range(len(S[i])):
@@ -204,7 +160,6 @@ def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int,
             step.prev = S[i][j-1] if j > 0 else (S[i-1][-1] if i > 0 else head)
             step.next = S[i][j+1] if j < len(S[i])-1 else (S[i+1][0] if i < len(S)-1 else tail)
             routesteps[step.get_edge()] = step
-            debugging_list.append(step)
     return routesteps, head
 
 def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
@@ -224,31 +179,11 @@ def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
             curr_route = []
         step = step.next
 
-    if len(curr_route) > 0:
-        curr_route[-1].is_route_end = True
-        full_routes.append(curr_route)
+    # if len(curr_route) > 0:
+    #     curr_route[-1].is_route_end = True
+    #     full_routes.append(curr_route)
     return full_routes
 
-def find_indice(S: list[list[RouteStep]], edge: tuple[int, int, int]) -> tuple[int, int]:
-    """
-    Finds the corresponding indice of an edge in a route
-
-    Args:
-        S (list[list[RouteStep]]): the list of routes
-        edge (tuple[int, int, int]): edge to look for
-
-    Returns:
-        tuple[int, int]: tuple containing two indices. The first is the indice of overall route,
-        second is indice within that route
-    """
-    edge = tuple(edge)
-    for i in range(len(S)):
-        route = S[i]
-        for j in range(len(route)):
-            if route[j].get_edge() == edge:
-                return (i, j)
-    
-    raise Exception("Edge not found")
 
 def relocate(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, int, int], edge2: tuple[int, int, int], sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
@@ -347,34 +282,6 @@ def swap(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int, in
     except:
         return False
 
-def find_route_end(step: RouteStep) -> RouteStep:
-    """
-    Finds the last step in the route that the step is a part of
-
-    Args:
-        step (RouteStep): the step
-
-    Returns:
-        RouteStep: the last step in the route
-    """
-    curr_step = step
-    while curr_step.is_route_end == False and curr_step.next != None and curr_step.next.get_edge() != (DEPOT, DEPOT, 0):
-        curr_step = curr_step.next
-    return curr_step
-
-def print_linked_list(head: RouteStep):
-    """
-    Prints the linked list
-
-    Args:
-        head (RouteStep): the head of the linked list
-    """
-    curr = head
-    while curr != None and curr.is_route_end == False:
-        print(curr)
-        curr = curr.next
-    if curr != None:
-        print(curr)
 
 def find_route_end_two_steps(step1: RouteStep, step2: RouteStep) -> tuple[RouteStep, RouteStep] | tuple[None, None]:
     """
@@ -396,7 +303,6 @@ def find_route_end_two_steps(step1: RouteStep, step2: RouteStep) -> tuple[RouteS
     if curr_step2 == step1:
         return None, None
     curr_step1 = step1
-    # somehow, the tail is getting moved when it should never be touched.
     while curr_step1.is_route_end == False and curr_step1.next.get_edge() != (DEPOT, DEPOT, 0):
         curr_step1 = curr_step1.next
 
@@ -498,12 +404,6 @@ def two_opt(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int,
     if step1end == None:
         return False
 
-    # print("Route from step1: ")
-    # print_linked_list(step1)
-    # print("Route from step2: ")
-    # print_linked_list(step2)
-    # print()
-    # print()
     # if the endsteps are the very tail, we want the previous step
     if step1end.next == None:
         step1end = step1end.prev
@@ -548,8 +448,6 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
                 modified: bool = operator(routestep_dict, edge, neighboring_edge, sp, threshold=threshold) #TODO: change back to operator
-                # if modified:
-                #     print("Modified")
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
                 # if curr_cost < S_best.cost:
                 #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
