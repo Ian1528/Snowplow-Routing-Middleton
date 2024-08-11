@@ -441,9 +441,9 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     random.shuffle(operators)
 
     nearest_neighbors = sp.compute_nearest_neighbors()
-    for operator in operators:
-        for edge in ALL_EDGES:
-            for neighboring_edge in nearest_neighbors[edge][1:K+1]:
+    for edge in ALL_EDGES:
+        for neighboring_edge in nearest_neighbors[edge][1:K+1]:
+            for operator in operators:
                 neighboring_edge = tuple(neighboring_edge)
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
