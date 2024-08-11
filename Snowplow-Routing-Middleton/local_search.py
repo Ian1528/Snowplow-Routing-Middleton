@@ -55,15 +55,16 @@ def swap_steps(x: RouteStep, y: RouteStep):
     x.route_id, y.route_id = y.route_id, x.route_id
     x.is_route_end, y.is_route_end = y.is_route_end, x.is_route_end
 
-    if x.is_route_end:
-        if not y.is_route_end:
-            x.is_route_end = False
-        y.is_route_end = True
+    # if x.is_route_end:
+    #     if not y.is_route_end:
+    #         x.is_route_end = False
+    #     y.is_route_end = True
 
-    if y.is_route_end:
-        if not x.is_route_end:
-            y.is_route_end = False
-        x.is_route_end = True
+    # if y.is_route_end:
+    #     if not x.is_route_end:
+    #         y.is_route_end = False
+    #     x.is_route_end = True
+    
     # if x.node2 == DEPOT:
     #     x.is_route_end = True
     # if y.node2 == DEPOT:
@@ -93,16 +94,6 @@ def insert(x: RouteStep, y: RouteStep):
     x.prev.next = x.next
     x.next.prev = x.prev
 
-    # update route endpoints
-    if x.is_route_end:
-        x.prev.is_route_end = True
-
-    if y.is_route_end:
-        x.is_route_end = True
-        y.is_route_end = False
-    else:
-        x.is_route_end = False
-
     y.next.prev = x
     x.prev = y
     x.next = y.next
@@ -110,13 +101,12 @@ def insert(x: RouteStep, y: RouteStep):
 
     # update the route id of the steps
     x.route_id = y.route_id
+    
+    # update route endpoints
+    oldXprev.is_route_end = x.is_route_end
+    x.is_route_end = y.is_route_end
+    y.is_route_end = False
 
-    if x.is_route_end:
-        oldXprev.is_route_end = True
-        if y.is_route_end:
-            y.is_route_end = False
-        else:
-            x.is_route_end = False
     # if x.node2 == DEPOT:
     #     x.is_route_end = True
     # if y.node2 == DEPOT:
@@ -180,6 +170,7 @@ def reverse_list(n1: RouteStep, n2: RouteStep):
     # if n2.node2 == DEPOT:
     #     n2.is_route_end = True
 debugging_list = []
+
 def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], RouteStep]:
     """
     Converts a list of routes to a linked list representation. This is useful for local search operators
@@ -234,6 +225,7 @@ def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
         step = step.next
 
     if len(curr_route) > 0:
+        curr_route[-1].is_route_end = True
         full_routes.append(curr_route)
     return full_routes
 
@@ -366,7 +358,7 @@ def find_route_end(step: RouteStep) -> RouteStep:
         RouteStep: the last step in the route
     """
     curr_step = step
-    while curr_step.is_route_end == False:
+    while curr_step.is_route_end == False and curr_step.next != None and curr_step.next.get_edge() != (DEPOT, DEPOT, 0):
         curr_step = curr_step.next
     return curr_step
 
@@ -397,7 +389,7 @@ def find_route_end_two_steps(step1: RouteStep, step2: RouteStep) -> tuple[RouteS
     """
     curr_step2 = step2
 
-    while curr_step2.is_route_end == False:
+    while curr_step2.is_route_end == False and curr_step2.next.get_edge() != (DEPOT, DEPOT, 0):
         if curr_step2 == step1:
             return None, None
         curr_step2 = curr_step2.next
@@ -405,7 +397,7 @@ def find_route_end_two_steps(step1: RouteStep, step2: RouteStep) -> tuple[RouteS
         return None, None
     curr_step1 = step1
     # somehow, the tail is getting moved when it should never be touched.
-    while curr_step1.is_route_end == False:
+    while curr_step1.is_route_end == False and curr_step1.next.get_edge() != (DEPOT, DEPOT, 0):
         curr_step1 = curr_step1.next
 
     return curr_step1, curr_step2
@@ -555,7 +547,7 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 neighboring_edge = tuple(neighboring_edge)
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
-                modified: bool = two_opt(routestep_dict, edge, neighboring_edge, sp, threshold=threshold) #TODO: change back to operator
+                modified: bool = operator(routestep_dict, edge, neighboring_edge, sp, threshold=threshold) #TODO: change back to operator
                 # if modified:
                 #     print("Modified")
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
