@@ -5,6 +5,7 @@ import geopandas as gpd
 import networkx as nx
 import pickle
 
+
 def add_toy_street_info(G: nx.Graph) -> None:
     """
     Adds street information to the graph, 
@@ -129,6 +130,36 @@ def create_small_streets() -> nx.MultiDiGraph:
     G = ox.graph_from_gdfs(nodes, edges)
     return G
 
+def get_salt_from_length(length: float) -> float:
+    """
+    Returns the amount of salt (in lbs) required for a given road length in meters. 250 lbs/mile
+
+    Parameters:
+        length (float): The length of the road segment.
+
+    Returns:
+        float: The amount of salt required for the road segment.
+    """
+    length_mile = length * 0.000621371
+    return length_mile * 250
+
+def is_culdesac(G: nx.MultiDiGraph, node: int) -> bool:
+    """
+    Determines if a given node in a MultiDiGraph represents a cul-de-sac.
+    Parameters:
+        G (nx.MultiDiGraph): The MultiDiGraph representing the road network.
+        node (int): The node to check.
+    Returns:
+        bool: True if the node is a cul-de-sac, False otherwise.
+    """
+
+    if G.out_degree(node) == 0:
+        return True
+    
+    edge = list(G.edges(node, data=True))
+    attrb = edge[0][2]
+    return G.out_degree(node) == 1 and G.in_degree(node) == 1 and attrb['highway'] == 'residential' and attrb['reversed'] == True
+
 def create_full_streets() -> nx.MultiDiGraph:
     """
     Creates a full streets network graph
@@ -152,32 +183,39 @@ def create_full_streets() -> nx.MultiDiGraph:
 
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
     passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
-    salt_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
     priorities = np.empty(len(edges))
     passes = np.empty(len(edges))
     salt = np.empty(len(edges))
     serviced = np.empty(len(edges), dtype=bool)
+    culdesac = np.empty(len(edges), dtype=bool)
 
     # go through each edge and update dictionary
-    for row in range(len(edges)):
-        highway_type = edges.iloc[row]['highway']
-        if street_gdf.iloc[row]['Jurisdicti'] == "City":
-            priorities[row] = priority_keys[highway_type]
-            passes[row] = passes_keys[highway_type]
-            salt[row] = salt_keys[highway_type]
-            serviced[row] = False
-        else:
-            priorities[row] = 0
-            passes[row] = 0
-            salt[row] = 0
-            serviced[row] = True
+    for index, edges_data in enumerate(edges.iterrows()):
+        edge = edges_data[0]
+        data = edges_data[1]
 
+        highway_type = data['highway']
+        length_meters = data['length']
+    
+        if street_gdf.iloc[index]['Jurisdicti'] == "City":
+            priorities[index] = priority_keys[highway_type]
+            passes[index] = passes_keys[highway_type]
+            salt[index] = get_salt_from_length(length_meters)
+            serviced[index] = False
+        else:
+            priorities[index] = 0
+            passes[index] = 0
+            salt[index] = 0
+            serviced[index] = True
+        
+        culdesac[index] = is_culdesac(G, edge[1]) # edge[1] corresponds to the second node of the edge
 
     edges['priority'] = priorities
     edges['passes_rem'] = passes
     edges['salt_per'] = salt
     edges['serviced'] = serviced
+    edges['culdesac'] = culdesac
     
     G = ox.graph_from_gdfs(nodes, edges)
     scc = list(nx.strongly_connected_components(G)) # strongly connected components
@@ -189,8 +227,6 @@ def create_full_streets() -> nx.MultiDiGraph:
 
     config_graph_attributes(G)
     return G
-  
-
 def add_multi_edges(G: nx.Graph) -> nx.MultiDiGraph:
     """
     Adds multiple edges to a graph based on the 'passes_rem' attribute of each edge.
