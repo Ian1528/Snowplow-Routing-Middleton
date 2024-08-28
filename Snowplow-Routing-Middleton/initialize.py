@@ -158,7 +158,13 @@ def is_culdesac(G: nx.MultiDiGraph, node: int) -> bool:
     
     edge = list(G.edges(node, data=True))
     attrb = edge[0][2]
-    return G.out_degree(node) == 1 and G.in_degree(node) == 1 and attrb['highway'] == 'residential' and attrb['reversed'] == True
+
+    # if 'roadtype' in attrb:
+    #     if attrb['roadtype'] == 'Ct' or attrb['roadtype'] == 'Cir':
+    #         if attrb['highway'] == 'residential':
+    #             return True
+
+    return G.out_degree(node) == 1 and G.in_degree(node) == 1 and attrb['highway'] == 'residential' and attrb['reversed'] == True and attrb['length'] < 500
 
 def create_full_streets() -> nx.MultiDiGraph:
     """
@@ -180,7 +186,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['width'] = np.array(street_gdf['With_EE_ft'])
     edges['roadtype'] = np.array(street_gdf['abvPostTyp'])
     edges['maintainer'] = np.array(street_gdf['Maintained'])
-
+    G = ox.graph_from_gdfs(nodes, edges)
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
     passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
@@ -218,6 +224,13 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['culdesac'] = culdesac
     
     G = ox.graph_from_gdfs(nodes, edges)
+    for edge in G.edges(data=True, keys=True):
+        if 'roadtype' in edge[3]:
+            if (edge[3]['roadtype'] == "Ct" or edge[3]['roadtype'] == "Cir") and edge[3]['highway'] == 'residential':
+                edge[3]['culdesac'] = True
+        elif "name" in edge[3]:
+            if edge[3]['name'] == "Bunker Hill Lane" or edge[3]['name'] == "Patrick Henry Way":
+                edge[3]['culdesac'] = True
     scc = list(nx.strongly_connected_components(G)) # strongly connected components
     scc.remove(max(scc, key=len))
 

@@ -105,7 +105,6 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[RouteSte
     """
     best_cost = math.inf
     best_routes = None
-
     for route_id in range(len(routes)):
         route = routes[route_id]
 
@@ -113,7 +112,6 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[RouteSte
             new_route = route[:i] + [edge] + route[i:]
             new_full_routes = routes[:route_id] + [new_route] + routes[route_id+1:]
             new_cost = routes_cost(G, sp, new_full_routes)
-
             if new_cost < best_cost:
                 best_cost = new_cost
                 best_routes = new_full_routes

@@ -10,7 +10,6 @@ from turns import angle_between_vectors, turn_direction
 from params import DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
 
 edges_serviced = 0
-
 def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, curr_salt : float, route_required : list[RouteStep], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[RouteStep, int]:
     
     """
@@ -95,7 +94,6 @@ def process_node(G: nx.Graph, prev: int, curr: int) -> tuple[list[tuple[int, int
     """
     c_min = math.inf
     c_max = -math.inf
-
     required = []
     for edge in G.edges([curr], data=True, keys=True):
         nxt = edge[1]

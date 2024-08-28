@@ -2,6 +2,7 @@ import math
 import networkx as nx
 # graph construction and vehicle caps
 DEPOT = 0
+
 SALT_CAP = 20000
 
 # route construction
@@ -20,7 +21,7 @@ POP_SIZE = 10
 N_ITER = 25
 BETA = .7
 
-parameters = [DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS]
+# parameters = [DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS]
 
 def set_params(params: dict) -> None:
     """
@@ -63,4 +64,4 @@ def find_depot(G: nx.MultiDiGraph) -> tuple[int, dict]:
         if distance < minDist:
             minDist = distance
             minNode = node
-    return minNode[0], minNode[1]
+    return minNode[0], minNode[1]['x'], minNode[1]['y']

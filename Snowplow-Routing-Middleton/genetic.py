@@ -106,7 +106,6 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
     Returns:
         Solution: the best solution found by the algorithm
     """
-
     # initialize population
     population: list[Solution] = list()
     sol_best = None
@@ -141,7 +140,6 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
 
         # apply crossover to generate new solution
         routes0 = apply_crossover(G, sp, S1.routes, S2.routes)
-
         new_cost = routes_cost(G, sp, routes0)
         new_sol = Solution(routes0, dict(), new_cost, 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, K)

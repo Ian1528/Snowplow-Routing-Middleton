@@ -23,7 +23,7 @@ from initialize import create_full_streets, config_graph_attributes
 
 def config_sectioned_component(G: nx.MultiDiGraph) -> nx.MultiGraph:
     """
-    Configures the sectioned component of the graph.
+    Configures the sectioned component of the graph by making it a strongly connected component and calculating the weighted degree.
     Parameters:
     - G (nx.MultiDiGraph): The input graph.
     Returns:
@@ -101,8 +101,14 @@ def load_polygon(path: str) -> shapely.Polygon:
     polygon = gpd.read_file(path)
     return polygon.geometry[0]
 
+def load_multiple_polygons(path: str) -> tuple[shapely.Polygon, shapely.Polygon]:
+    polygon = gpd.read_file(path)
+    required_part = polygon.geometry[polygon.is_required]
+    not_required_part = polygon.geometry[~polygon.is_required]
+    return required_part.iloc[0], not_required_part.iloc[0]
 
-def section_component(polygon_path: str) -> nx.MultiDiGraph:
+
+def section_component(polygon_path: str, required_parts: bool = False) -> nx.MultiDiGraph:
     """
     Sections a component of the full streets graph within a given polygon.
     Parameters:
@@ -112,7 +118,27 @@ def section_component(polygon_path: str) -> nx.MultiDiGraph:
     """
     
     nodes, edges, G_full = get_full_streets_nodes_edges()
-    polygon = load_polygon(polygon_path)
-    G_sectioned = create_sectioned_component(G_full, nodes, edges, polygon)
-    G_sectioned = config_sectioned_component(G_sectioned)
-    return G_sectioned
+
+    if not required_parts:
+        polygon = load_polygon(polygon_path)
+        G_sectioned = create_sectioned_component(G_full, nodes, edges, polygon)
+        G_sectioned = config_sectioned_component(G_sectioned)
+        return G_sectioned
+    else:
+        required_part, not_required_part = load_multiple_polygons(polygon_path)
+        G_required = create_sectioned_component(G_full, nodes, edges, required_part)
+        G_not_required = create_sectioned_component(G_full, nodes, edges, not_required_part)
+
+        for edge in G_not_required.edges(data=True, keys=True):
+            if edge not in G_required.edges(data=True, keys=True):
+                G_required.add_edge(edge[0], edge[1], key=edge[2], **edge[3])
+            G_required[edge[0]][edge[1]][edge[2]]['priority'] = 0
+            G_required[edge[0]][edge[1]][edge[2]]['salt_per'] = 0
+            G_required[edge[0]][edge[1]][edge[2]]['serviced'] = True
+
+        G_required = config_sectioned_component(G_required)
+        return G_required
+
+if __name__ == "__main__":
+    green_route_filepath = "C:\\Users\\Sneez\\Desktop\\Snowplowing\\Data+Info\\GIS Data\\IndividualRoutes\\MiddletonRoute2-green_labeled.gpkg"
+    section_component(green_route_filepath, False)

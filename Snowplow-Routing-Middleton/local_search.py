@@ -6,7 +6,6 @@ from costs import routes_cost
 import copy
 import random
 import networkx as nx
-
 def swap_steps(x: RouteStep, y: RouteStep):
     """
     Swaps two routesteps
@@ -414,7 +413,6 @@ def two_opt(routesteps: dict[tuple[int, int, int]: RouteStep], edge1: tuple[int,
         return two_opt_intra_route(step1, step2, sp, threshold)
     else:
         return two_opt_inter_route(step1, step2, step1end, step2end, sp, threshold)
-    
 def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], K: int=3, threshold: float = 1) -> Solution:
     """
     Takes a current solution and runs the local improvement algorithm. First, the four local search operators are randomly shuffled.

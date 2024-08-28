@@ -1,7 +1,7 @@
 import itertools as it
 import matplotlib.pyplot as plt
 import networkx as nx
-from params import DEPOT
+from params import find_depot
 
 def get_node_pos(G):
     return {node[0]: (node[1]['x'], node[1]['y']) for node in G.nodes(data=True)}
@@ -19,6 +19,7 @@ def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Gra
         title (str, optional): _description_. Defaults to "Graph Representation of Town".
         plotDepot (bool, optional): _description_. Defaults to False.
     """
+    DEPOT, DEPOTX, DEPOTY  = find_depot(G)
     pos = get_node_pos(G)
     # Works with arc3 and angle3 connectionstyles
     connectionstyle = [f"arc3,rad={r}" for r in it.accumulate([0.15] * 4)]
@@ -30,7 +31,7 @@ def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Gra
     plt.title(title, size=50)
 
     if plotDepot:
-        plt.plot(depotCoords['x'], depotCoords['y'], 'ro', label='Depot', markersize=50)
+        plt.plot(DEPOTX, DEPOTY, 'ro', label='Depot', markersize=50)
 
     nx.draw_networkx_nodes(G, pos, ax=ax, node_color="black")
     nx.draw_networkx_labels(G, pos, font_size=50, ax=ax, labels=node_lables)
