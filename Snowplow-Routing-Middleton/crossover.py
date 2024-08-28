@@ -38,19 +38,20 @@ def remove_duplicates(changed_route_index: int, routes: list[list[RouteStep]], s
         sp (ShortestPaths): corresponding shortest paths object
     """
     added_route = routes[changed_route_index]
-
+    print("Added route: ", added_route)
     for h in range(len(routes)):
         route = routes[h]
-        new_route = route.copy()
         if h == changed_route_index:
             continue
-        for i in range(len(route)):
+    
+        # loop backwards so deletion while iterating is feasible
+        for i in range(len(route)-1, -1, -1):
             step = route[i]
             edge = step.get_edge()
-
-            if step in added_route:
-                # duplicate
+            print("current step", step)
+            try:
                 j = added_route.index(step)
+                print("Found dupliate")
                 prev_edge = (DEPOT,DEPOT,0) if j == 0 else added_route[j-1].get_edge()
                 next_edge = (DEPOT,DEPOT,0) if j == len(added_route)-1 else added_route[j+1].get_edge()
 
@@ -60,13 +61,25 @@ def remove_duplicates(changed_route_index: int, routes: list[list[RouteStep]], s
                 next_edge = (DEPOT,DEPOT,0) if i == len(route)-1 else route[i+1].get_edge()
 
                 diff2 = sp.get_dist(prev_edge, edge) + sp.get_dist(edge, next_edge) - sp.get_dist(prev_edge, next_edge)
-                
-                # compare the two places to remove the edge
+
+                # remove the place with the smaller diff
                 if diff2 > diff1:
-                    added_route.remove(step)
+                    del added_route[j] # del because we know the index for certain
+                    print("deleting within added route")
                 else:
-                    new_route.remove(step)
-        route = new_route
+                    print("deleting from original")
+                    del route[i] # remove b/c indices might change with multiple removals
+            except ValueError:
+                # no duplicate
+                continue
+    all_edges = set()
+    for i in range(len(routes)):
+        route = routes[i]
+        for step in route:
+            prev_length = len(all_edges)
+            all_edges.add(step.get_edge())
+            if len(all_edges) == prev_length:
+                print(f"Duplicate found in {i}th route, removed index was {changed_route_index}")
 
 
 def get_missing_edges(G: nx.MultiDiGraph, routes: list[list[RouteStep]]) -> set:
@@ -132,10 +145,18 @@ def apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[Ro
     Returns:
         list[list[RouteStep]]: new set of routes
     """
-
+    def total_length(routes: list[list[RouteStep]]):
+        count = 0
+        for route in routes:
+            count += len(route)
+        return count
     routes0, change_index = combine(routes1, routes2)
+    print("AFter combining, route lenght is ", total_length(routes0))
     remove_duplicates(change_index, routes0, sp)
 
+    print("Removed duplicates, route length is now", total_length(routes0))
+    num_missing = len(get_missing_edges(G, routes0))
+    print(f"Need to add {num_missing} edges for a total of {num_missing+total_length(routes0)}")
     for edge in get_missing_edges(G, routes0):
         step = RouteStep(edge[0], edge[1], edge[2])
         routes0 = insert_edge(G, step, routes0, sp)

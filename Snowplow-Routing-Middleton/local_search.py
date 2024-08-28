@@ -6,6 +6,13 @@ from costs import routes_cost
 import copy
 import random
 import networkx as nx
+
+class Node:
+    def __init__(self, data: RouteStep, next: "Node" = None, prev: "Node" = None):
+        self.data = data
+        self.next = next
+        self.prev = prev
+
 def swap_steps(x: RouteStep, y: RouteStep):
     """
     Swaps two routesteps
@@ -160,6 +167,38 @@ def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int,
             step.next = S[i][j+1] if j < len(S[i])-1 else (S[i+1][0] if i < len(S)-1 else tail)
             routesteps[step.get_edge()] = step
     return routesteps, head
+
+# def individual_to_linked_list(S: list[list[RouteStep]]) -> tuple[dict[tuple[int, int, int]: RouteStep], Node]:
+#     """
+#     Converts a list of routes to a linked list representation. This is useful for local search operators
+
+#     Args:
+#         S (list[list[RouteStep]]): the list of routes
+
+#     Returns:
+#         dict[tuple[int, int, int]: RouteStep], RouteStep: a dictionary of edges to RouteStep objects and the head of the linked list
+#     """
+#     routesteps = dict()
+#     head = Node(RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1))
+#     tail = Node(RouteStep(DEPOT, DEPOT, 0, False, False, SALT_CAP, None, None, -1))
+#     # update links
+#     for i in range(len(S)):
+#         for j in range(len(S[i])):
+#             step = Node(S[i][j])
+
+#             if i == 0 and j == 0:
+#                 head.next = step
+#             if i == len(S)-1 and j == len(S[i])-1:
+#                 tail.prev = step
+
+#             if j == len(S[i])-1:
+#                 step.is_route_end = True
+            
+#             step.prev = S[i][j-1] if j > 0 else (S[i-1][-1] if i > 0 else head)
+#             step.next = S[i][j+1] if j < len(S[i])-1 else (S[i+1][0] if i < len(S)-1 else tail)
+#             routesteps[step.get_edge()] = step
+#     return routesteps, head
+
 
 def linked_list_to_individual(head: RouteStep) -> list[list[RouteStep]]:
     full_routes = []
@@ -431,7 +470,8 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     ALL_EDGES = [step.get_edge() for route in S.routes for step in route if step.get_edge() != (DEPOT,DEPOT,0)]
     operators = [relocate, relocate_v2, swap, two_opt]
     
-    S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
+    # S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
+    S_new = S
 
     routestep_dict, all_routes_original = individual_to_linked_list(S_new.routes)
 
@@ -449,6 +489,8 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
                 # if curr_cost < S_best.cost:
                 #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
+    new_routes = linked_list_to_individual(all_routes_original)
+    return Solution(new_routes, S.similarities, routes_cost(G, sp, new_routes,), 0)
     S_new.routes = linked_list_to_individual(all_routes_original)
     return S_new
 
