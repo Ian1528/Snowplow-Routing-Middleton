@@ -1,3 +1,4 @@
+from shortest_paths import ShortestPaths
 class RouteStep:
     """
     Represents a step in a route.
@@ -60,3 +61,19 @@ class FullRoute:
             print(node)
             node = node.next
     
+def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]):
+    full_route = list()
+    for i in range(len(routes)):
+        for j in range(len(routes[i])):
+            edge = routes[i][j]
+            next_edge = routes[i][j+1] if j+1 < len(routes[i]) else routes[i+1][0] if i+1 < len(routes) else None
+            if next_edge is not None:
+                if edge[1] == next_edge[0]:
+                    full_route.append(edge)
+                else:
+                    path = sp.get_shortest_path(edge, next_edge)
+                    full_route.extend(path)
+                    full_route.pop()
+            else:
+                full_route.append(edge)
+    return full_route

@@ -3,7 +3,22 @@ from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
 from routes_representations import RouteStep
 from params import DEPOT, COST_WEIGHTS
-
+def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]]) -> float:
+    """
+    Calculate the total travel time of a route.
+    
+    Parameters:
+        G (nx.MultiDiGraph): The graph representing the street network.
+        route (list[tuple[int, int, int]]: The route to be evaluated.
+    Returns:
+        float: The total travel time of the route.
+    """
+    travel_time = 0
+    for edge in route:
+        if edge == (DEPOT, DEPOT, 0):
+            continue
+        travel_time += G.get_edge_data(edge[0], edge[1], edge[2])['travel_time']
+    return travel_time
 def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> float:
     """
     Returns the cost of traversing an edge between two nodes. 

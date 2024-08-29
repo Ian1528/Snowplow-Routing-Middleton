@@ -4,6 +4,8 @@ import networkx as nx
 DEPOT = 0
 
 SALT_CAP = 20000
+PLOW_SPEED_RESIDENTIAL = 4.91744 # m/s
+PLOW_SPEED_HIGHWAY = 8.9408 # m/s
 
 # route construction
 ALPHA = 1

@@ -4,6 +4,7 @@ import numpy as np
 import geopandas as gpd
 import networkx as nx
 import pickle
+from params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
 
 
 def add_toy_street_info(G: nx.Graph) -> None:
@@ -195,7 +196,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     salt = np.empty(len(edges))
     serviced = np.empty(len(edges), dtype=bool)
     culdesac = np.empty(len(edges), dtype=bool)
-
+    plow_time = np.empty(len(edges))
     # go through each edge and update dictionary
     for index, edges_data in enumerate(edges.iterrows()):
         edge = edges_data[0]
@@ -215,6 +216,10 @@ def create_full_streets() -> nx.MultiDiGraph:
             salt[index] = 0
             serviced[index] = True
         
+        if highway_type == "residential" or highway_type == "tertiary":
+            plow_time[index] = length_meters / PLOW_SPEED_RESIDENTIAL
+        else:
+            plow_time[index] = length_meters / PLOW_SPEED_HIGHWAY
         culdesac[index] = is_culdesac(G, edge[1]) # edge[1] corresponds to the second node of the edge
 
     edges['priority'] = priorities
@@ -222,7 +227,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['salt_per'] = salt
     edges['serviced'] = serviced
     edges['culdesac'] = culdesac
-    
+    edges['travel_time'] = plow_time
     G = ox.graph_from_gdfs(nodes, edges)
     for edge in G.edges(data=True, keys=True):
         if 'roadtype' in edge[3]:
