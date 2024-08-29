@@ -91,8 +91,7 @@ def remove_worst(population: list[Solution], beta: float) -> None:
     ranks = beta*ranks_cost + (1-beta)*ranks_distance
 
     worst = population[np.argmax(ranks)]
-
-    population.remove(worst)
+    del population[np.argmax(ranks)]
 
 
 def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
@@ -116,7 +115,10 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
         r, rreq = route_generation(G, sp)
         new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq), 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, K)
-        
+        if(len(new_sol.routes) == 0):
+            print("Found empty route after local improve!!")
+            raise Exception()
+
         if i == 0:
             sol_best = new_sol
         else:
@@ -137,19 +139,25 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
         S1 = random.choice(population)
         # select another random solution
         S2 = random.choice(list(S1.similarities.keys()))
-
+        if (len(S1.routes) == 0) or (len(S2.routes) == 0):
+            print("empty routes, why?")
         # apply crossover to generate new solution
         routes0 = apply_crossover(G, sp, S1.routes, S2.routes)
+        if(len(new_sol.routes) == 0):
+            print("Found empty route after crossover!!")
+            raise Exception()
+
         new_cost = routes_cost(G, sp, routes0)
         new_sol = Solution(routes0, dict(), new_cost, 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, K)
-
+        if(len(new_sol.routes) == 0):
+            print("Found empty route after localimprove, routes were ", routes0)
+            raise Exception()
         # update similarities
         for i in range(len(population)):
             sim = similarity(population[i], new_sol)
             population[i].add_similarity(new_sol, sim)
             new_sol.add_similarity(population[i], sim)
-
         population.append(new_sol)
 
         if sol_best.cost > new_sol.cost:

@@ -16,6 +16,9 @@ COST_WEIGHTS = [.4, .2, .4]
 # local search
 K = 3
 
+# crossover
+KAPPA = 3 # number of nearest neighbors to consider when inserting edge
+
 # genetic algorithm
 POP_SIZE = 10
 N_ITER = 25

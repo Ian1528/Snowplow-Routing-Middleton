@@ -65,7 +65,7 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     return weight
 
 
-def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[RouteStep]]) -> float:
+def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> float:
     """
     Calculates the total cost of a full set of routes, represented as a 2d list of routestep objects.
 
@@ -83,11 +83,11 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[Ro
     time = 0
     for route in routes:
         for i in range(len(route)):
-            edge = (route[i].node1, route[i].node2, route[i].edge_id)
+            edge = route[i]
 
             # penalize the turn
             if i+1 < len(route):
-                next_edge = (route[i+1].node1, route[i+1].node2, route[i+1].edge_id)
+                next_edge = route[i+1]
                 # add cost, which incorpates turn penalties already
                 time_cost += shortest_paths.get_dist(edge, next_edge) 
             else:

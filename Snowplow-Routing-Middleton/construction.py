@@ -10,7 +10,7 @@ from turns import angle_between_vectors, turn_direction
 from params import DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
 
 edges_serviced = 0
-def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, curr_salt : float, route_required : list[RouteStep], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[RouteStep, int]:
+def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:
     
     """
     Visits an arc and updates the current route and graph information. 
@@ -34,8 +34,8 @@ def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, cu
     id = arc[2]
     # initialize routstep object
     
-    prev_routestep = route_required[-1] if len(route_required) > 0 else (all_prev_routes_required[-1][-1] if len(all_prev_routes_required) > 0 else None)
-    
+    prev_edge = route_required[-1] if len(route_required) > 0 else (all_prev_routes_required[-1][-1] if len(all_prev_routes_required) > 0 else None)
+    prev_routestep = RouteStep(prev_edge[0], prev_edge[1], prev_edge[2]) if prev_edge != None else None
     new_routestep = RouteStep(from_node, to_node, id, options=options, saltval=curr_salt)
 
     # need a check to see if we can actually service the arc given the amount of salt we have left.
@@ -55,7 +55,7 @@ def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, cu
         
         edges_serviced += 1
         new_routestep.deadheaded = False
-        route_required.append(new_routestep)
+        route_required.append((from_node, to_node, id))
 
         # update links
         new_routestep.prev = prev_routestep
@@ -106,7 +106,7 @@ def process_node(G: nx.Graph, prev: int, curr: int) -> tuple[list[tuple[int, int
 
 
 
-def return_to_depot(G: nx.Graph, DEPOT: int, previous: RouteStep, route_up_to_now: list[RouteStep], route_required: list[RouteStep], salt: int, shortest_paths_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]], options=False) -> None:
+def return_to_depot(G: nx.Graph, DEPOT: int, previous: RouteStep, route_up_to_now: list[RouteStep], route_required: list[tuple[int, int, int]], salt: int, shortest_paths_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]], options=False) -> None:
     """
     Returns to the depot via the shortest path, updating any required arcs along the way. 
 
@@ -319,7 +319,7 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
 
     return rcl[index]
 
-def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[RouteStep], DEPOT: int, curr_salt: float, sp_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]]) -> tuple[list[RouteStep], list[RouteStep]]:
+def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[tuple[int, int, int]], DEPOT: int, curr_salt: float, sp_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]]) -> tuple[list[RouteStep], list[RouteStep]]:
     """
     Implements the Route Construction Algorithm (RCA) for snowplow routing.
 
@@ -394,7 +394,7 @@ def calc_total_required_edges(G: nx.Graph) -> int:
             total_required += 1
     return total_required
 
-def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[RouteStep]], list[list[RouteStep]]]:
+def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[RouteStep]], list[list[tuple[int, int, int]]]]:
     """
     Generates a full set of routes given a street network.
     Makes a copy of the original graph to avoid modifying the original.
@@ -419,7 +419,7 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[Ro
     routes_only_required = []
 
     partial_route: list[RouteStep] = list()
-    partial_route_required: list[RouteStep] = list()
+    partial_route_required: list[tuple[int, int, int]] = list()
     
     while all_serviced(total_required) == False:
         partial_route, partial_route_required = RCA(G_copy, curr_node, partial_route, partial_route_required, DEPOT, curr_salt, sp_model, routes_only_required)

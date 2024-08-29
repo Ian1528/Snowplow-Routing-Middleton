@@ -60,11 +60,11 @@ def add_order_attribute(G, routes):
     G_graph = G.copy()
     count = 0
     for route in routes:
-        for step in route:
-            if G_graph[step.node1][step.node2][step.edge_id].get('order') is None:
-                G_graph[step.node1][step.node2][step.edge_id]['order'] = str(count)
+        for edge in route:
+            if G_graph[edge[0]][edge[1]][edge[2]].get('order') is None:
+                G_graph[edge[0]][edge[1]][edge[2]]['order'] = str(count)
             else:
-                G_graph[step.node1][step.node2][step.edge_id]['order'] += ", " + str(count)
+                G_graph[edge[0]][edge[1]][edge[2]]['order'] += ", " + str(count)
             count += 1
     for edge in G_graph.edges(data=True):
         if edge[2].get('order') is None:
