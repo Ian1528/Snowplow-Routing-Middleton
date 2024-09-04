@@ -50,7 +50,7 @@ def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes:
             angle_value = angle_between_points(remaining[0], shared[0], remaining[1])
 
             L.edges[from_node[:3], to_node[:3], 0]['weight'] = cost_of_dual_node(from_node, angle_value)
-    
+            
     if sourceNodes:
         # add source and target nodes
         for node in G:

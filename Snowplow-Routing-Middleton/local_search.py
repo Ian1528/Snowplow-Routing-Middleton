@@ -6,7 +6,6 @@ from costs import routes_cost
 import copy
 import random
 import networkx as nx
-
 class Node:
     def __init__(self, data: tuple[int, int, int], next: "Node" = None, prev: "Node" = None, is_route_end: bool = False):
         self.data = data

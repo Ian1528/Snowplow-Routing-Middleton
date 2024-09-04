@@ -221,7 +221,7 @@ def create_full_streets() -> nx.MultiDiGraph:
         else:
             plow_time[index] = length_meters / PLOW_SPEED_HIGHWAY
         culdesac[index] = is_culdesac(G, edge[1]) # edge[1] corresponds to the second node of the edge
-
+    print("Average plow time: ", np.mean(plow_time), "max", np.max(plow_time), "min", np.min(plow_time))
     edges['priority'] = priorities
     edges['passes_rem'] = passes
     edges['salt_per'] = salt

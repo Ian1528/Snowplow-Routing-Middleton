@@ -2,7 +2,7 @@ import networkx as nx
 from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
 from routes_representations import RouteStep
-from params import DEPOT, COST_WEIGHTS
+from params import DEPOT, COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR
 def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]]) -> float:
     """
     Calculate the total travel time of a route.
@@ -16,6 +16,9 @@ def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]]) -> 
     travel_time = 0
     for edge in route:
         if edge == (DEPOT, DEPOT, 0):
+            continue
+        if G.get_edge_data(edge[0], edge[1], edge[2]) == None:
+            print("no edge,", edge, DEPOT)
             continue
         travel_time += G.get_edge_data(edge[0], edge[1], edge[2])['travel_time']
     return travel_time
@@ -40,7 +43,6 @@ def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> flo
     # without previous node, we can't factor turn direction
     if prev is None:
         return cost
-    
     # with a previous node, we incorporate turning penalites
     turn_cost = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 4}
 
@@ -54,7 +56,7 @@ def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> flo
     w = (w_x, w_y)
 
     theta = angle_between_vectors(v,w)
-    cost += turn_cost[turn_direction(theta)]
+    cost += TURN_WEIGHT*turn_cost[turn_direction(theta)]
 
     return cost
 
@@ -76,7 +78,7 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     # add the turn penalty cost
     turn_penalty = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 4}
     
-    weight += turn_penalty[turn_direction(angle)]
+    weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
 
 
@@ -112,7 +114,7 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
             # penalize priorities
             edge_data = G[edge[0]][edge[1]][edge[2]]
             time += edge_data['travel_time']
-            priority_cost += edge_data['priority'] * time
+            priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
             
         # penalize number of returns to depot
     # penalize deadheading
@@ -121,7 +123,6 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
 
     all_costs = [time_cost, deadhead_cost, priority_cost]
     total_cost = 0
-
     for i in range(3):
         total_cost += all_costs[i]*COST_WEIGHTS[i]
     return total_cost

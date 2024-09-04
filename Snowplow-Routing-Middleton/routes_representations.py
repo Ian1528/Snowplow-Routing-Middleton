@@ -61,7 +61,17 @@ class FullRoute:
             print(node)
             node = node.next
     
-def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]):
+def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> list[tuple[int, int, int]]:
+    """
+    Generates a full route by connecting the given routes using the ShortestPaths object.
+
+    Args:
+        sp (ShortestPaths): An instance of the ShortestPaths class.
+        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route is represented as a list of tuples.
+
+    Returns:
+        list[tuple[int, int, int]]: The full route connecting all the given routes.
+    """
     full_route = list()
     for i in range(len(routes)):
         for j in range(len(routes[i])):
