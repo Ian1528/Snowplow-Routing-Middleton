@@ -52,7 +52,15 @@ def two_opt_inter(step1: Node, step2: Node, step1end, step2end):
         step1end.next = old_step2end_next
         old_step2end_next.prev = step1end
     
-
+def print_list(head):
+    current = head
+    result = "["
+    while current is not None:
+        # print(current)
+        result += current.data + ", "
+        current = current.next
+    result += "]"
+    print(result)
 def reverse_list(n1: Node, n2: Node):
     """
     Reverses the linked list between node1A and node2A, inclusive. Node 1 comes before node 2.
@@ -124,22 +132,26 @@ node4A.next = node5A
 node5A.prev = node4A
 node5A.next = node6A
 node6A.prev = node5A
-node6A.next = node1B
+node6A.next = None
 
+print_list(headA)
+reverse_list(node2A, node5A)
+reverse_list(node5A, node2A)
+print_list(headA)
+# node1B.prev = node6A
+# node1B.next = node2B
+# node2B.prev = node1B
+# node2B.next = node3B
+# node3B.prev = node2B
+# node3B.next = node4B
+# node4B.prev = node3B
+# node4B.next = node5B
+# node5B.prev = node4B
+# node5B.next = node6B
+# node6B.prev = node5B
+# node6B.next = tailB
+# tailB.prev = node6B
 
-node1B.prev = node6A
-node1B.next = node2B
-node2B.prev = node1B
-node2B.next = node3B
-node3B.prev = node2B
-node3B.next = node4B
-node4B.prev = node3B
-node4B.next = node5B
-node5B.prev = node4B
-node5B.next = node6B
-node6B.prev = node5B
-node6B.next = tailB
-tailB.prev = node6B
 
 
 # current = headA
@@ -155,13 +167,13 @@ tailB.prev = node6B
 #     current = current.next
 
 
-two_opt_inter(node2A, node3B, node6A, node6B)
-# two_opt_inter(node1B, node3A, node6B, node6A)
-current = headA.next
-while current is not None:
-    print(current)
-    current = current.next
+# two_opt_inter(node2A, node3B, node6A, node6B)
+# # two_opt_inter(node1B, node3A, node6B, node6A)
+# current = headA.next
+# while current is not None:
+#     print(current)
+#     current = current.next
 
-print()
+# print()
 
 

@@ -81,7 +81,44 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
 
+def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, head) -> float:
+    """
+    Calculates the total cost of a route represented as a linked list of edges.
+    Parameters:
+        G (nx.MultiDiGraph): The graph representing the network.
+        shortest_paths (ShortestPaths): The object containing the shortest paths information.
+        head (Node): The head node of the linked list.
+    Returns:
+        float: The total cost of the route.
+    """
+    
+    time_cost = 0
+    priority_cost = 0
+    deadhead_cost = 0
+    time = 0
 
+    node = head.next
+    while node.next != None:
+        edge = node.data
+        if not node.is_route_end:
+            next_edge = node.next.data
+            time_cost += shortest_paths.get_dist(edge, next_edge)
+        else:
+            time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
+        # penalize priorities
+        edge_data = G[edge[0]][edge[1]][edge[2]]
+        time += edge_data['travel_time']
+        priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
+        node = node.next            
+    # penalize deadheading
+    for edge in G.edges(data=True):
+        deadhead_cost += edge[2]['deadheading_passes']
+
+    all_costs = [time_cost, deadhead_cost, priority_cost]
+    total_cost = 0
+    for i in range(3):
+        total_cost += all_costs[i]*COST_WEIGHTS[i]
+    return total_cost
 def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> float:
     """
     Calculates the total cost of a full set of routes, represented as a 2d list of routestep objects.
