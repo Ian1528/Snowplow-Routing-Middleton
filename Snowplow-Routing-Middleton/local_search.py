@@ -7,14 +7,15 @@ import copy
 import random
 import networkx as nx
 class Node:
-    def __init__(self, data: tuple[int, int, int], next: "Node" = None, prev: "Node" = None, is_route_end: bool = False):
+    def __init__(self, data: tuple[int, int, int], next: "Node" = None, prev: "Node" = None, is_route_end: bool = False, route_belong: str = "OLD"):
         self.data = data
         self.next = next
         self.prev = prev
         self.is_route_end = is_route_end
+        self.route_belong = route_belong
 
     def __str__(self):
-        return f"{self.data} -> {self.next.data if self.next else None}"
+        return f"{self.prev.data if self.prev else None} -> [{self.data}] -> {self.next.data if self.next else None} {self.route_belong}"
     def __repr__(self):
         return str(self)
 
@@ -342,7 +343,7 @@ def find_route_end_two_steps(edge1: Node, edge2: Node) -> tuple[Node, Node] | tu
 
     return curr_step1, curr_step2
 
-def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Node, sp: ShortestPaths, threshold: float) -> bool:
+def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Node, edge_node_map: dict, sp: ShortestPaths, threshold: float) -> bool:
     """
     Two-opt operator for steps in the same route
 
@@ -356,12 +357,12 @@ def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: N
     reverse_list(edge1, edge2)
     new_cost = routes_cost_linked_list(G, sp, head)
     if new_cost < old_cost * threshold:
-        return True, new_cost
+        return head, True, new_cost, edge_node_map
     else:
         reverse_list(edge2, edge1)
-        return False, old_cost
+        return head, False, old_cost, edge_node_map
 
-def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, original_edge1: Node, original_edge2: Node, original_edge1end: Node, original_edge2end: Node, sp: ShortestPaths, threshold: float) -> bool:
+def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, original_edge1: Node, original_edge2: Node, original_edge1end: Node, original_edge2end: Node, original_edge_node_map: dict, sp: ShortestPaths, threshold: float) -> bool:
     """
     Two-opt operator for steps in different routes
 
@@ -373,12 +374,13 @@ def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, origina
         list[list[RouteStep]]: new set of modified routes
     """
     # create a copy of the linked list
-    new_head = Node((DEPOT, DEPOT, 0))
+    new_head = Node((DEPOT, DEPOT, 0), route_belong="New")
+    new_edge_node_map = dict()
     prev_node = new_head
-
+    
     node = head.next
     while node != None:
-        new_node = Node(node.data, is_route_end=node.is_route_end)
+        new_node = Node(node.data, is_route_end=node.is_route_end, route_belong="NEW")
         new_node.prev = prev_node
         prev_node.next = new_node
         prev_node = new_node
@@ -391,24 +393,10 @@ def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, origina
             edge1end = new_node
         if node.data == original_edge2end.data:
             edge2end = new_node
-        
+
+        new_edge_node_map[node.data] = new_node
         node = node.next
 
-    edge1 = original_edge1
-    edge2 = original_edge2
-    edge1end = original_edge1end
-    edge2end = original_edge2end
-
-    start_length_old = len_routes(head)
-    start_length_new = len_routes(new_head)
-    # if len_routes(new_head) != len_routes(head):
-    #     print("Lengths not equal")
-    #     print("Old length:", len_routes(head))
-    #     print("New length:", len_routes(new_head))
-    #     print_linked_list(head)
-    #     print_linked_list(new_head)
-    #     raise Exception("Lengths not equal")
-    # algorithm that implements twoopt
     old_edge1end_next = edge1end.next
     old_edge2end_next = edge2end.next
 
@@ -424,69 +412,27 @@ def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, origina
         edge2end.next = edge1
         edge1end.next = old_edge2end_next
         old_edge2end_next.prev = edge1end
-        if len_routes(new_head) != len_routes(head):
-            print("Lengths not equal, first if")
-            print("Old length:", len_routes(head))
-            print("New length:", len_routes(new_head))
-            print_linked_list(head)
-            print_linked_list(new_head)
-            raise Exception("Lengths not equal")
-
     else:
         edge1.prev = edge2prev
         edge2end.next = old_edge1end_next
         old_edge1end_next.prev = edge2end
-        if len_routes(new_head) != len_routes(head):
-            print("Lengths not equal, first else")
-            print("Old length:", len_routes(head))
-            print("New length:", len_routes(new_head))
-            print("edge1", edge1)
-            print("edge2prev", edge2prev)
-            print("edge2end", edge2end, edge2end.next.prev)
-            print("edge1end", edge1end, edge1end.next.prev)
-            print("edge2end.next", edge2end.next)
-            print("old_edge1end_next", old_edge1end_next)
 
-            raise Exception("Lengths not equal")
     if edge1prev == edge2end:
         edge2.prev = edge1end
         edge1end.next = edge2
         edge2end.next = old_edge1end_next
         old_edge1end_next.prev = edge2end
-        if len_routes(new_head) != len_routes(head):
-            print("Lengths not equal, second if")
-            print("Old length:", len_routes(head))
-            print("New length:", len_routes(new_head))
-            print_linked_list(head)
-            print_linked_list(new_head)
-            raise Exception("Lengths not equal")
     else:
         edge2.prev = edge1prev
         edge1end.next = old_edge2end_next
         old_edge2end_next.prev = edge1end
-        if len_routes(new_head) != len_routes(head):
-            print("Lengths not equal, second else")
-            print("Old length:", len_routes(head))
-            print("New length:", len_routes(new_head))
-            print_linked_list(head)
-            print_linked_list(new_head)
-            raise Exception("Lengths not equal")
-    
     new_cost = routes_cost_linked_list(G, sp, new_head)
 
-    # if new_cost < old_cost * threshold:
-    #     print("Updating links, length of routes")
-    #     print("Old length:", len_routes(head))
-    #     print("New length:", len_routes(new_head))
-    #     print("Start length old:", start_length_old)
-    #     print("Start length new:", start_length_new)
-    #     # improvement, so update links
-    #     head.next = new_head.next
-    #     new_head.next.prev = head
-    #     return True, new_cost
-
-    return False, old_cost
-def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
+    if new_cost < old_cost * threshold:
+        return new_head, True, new_cost, new_edge_node_map
+    return head, False, old_cost, original_edge_node_map
+    
+def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, edge_node_map: dict, sp: ShortestPaths, threshold: float = 1) -> list[list[RouteStep]]:
     """
     Reverse the order of traversal of the edges between the two indicated edges within the route. This is a swap with a reversal
     Example: two opt between b and f:
@@ -511,7 +457,7 @@ def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2:
 
     # None check
     if edge1end == None:
-        return False, old_cost
+        return head, False, old_cost, edge_node_map
 
     # if the endedges are the very tail, we want the previous edge
     if edge1end.next == None:
@@ -520,10 +466,9 @@ def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2:
         edge2end = edge2end.prev
         
     if edge1end == edge2end:
-        return old_cost, False
-        return two_opt_intra_route(G, head, old_cost, edge1, edge2, sp, threshold)
+        return two_opt_intra_route(G, head, old_cost, edge1, edge2, edge_node_map, sp, threshold)
     else:
-        return two_opt_inter_route(G, head, old_cost, edge1, edge2, edge1end, edge2end, sp, threshold)
+        return two_opt_inter_route(G, head, old_cost, edge1, edge2, edge1end, edge2end, edge_node_map, sp, threshold)
 def len_routes(head: Node):
     node = head.next
     count = 0
@@ -548,16 +493,15 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     """
     import time
     ALL_EDGES = [edge for route in S.routes for edge in route if edge != (DEPOT,DEPOT,0)]
-    # operators = [relocate, relocate_v2, swap, two_opt]
-    operators = [two_opt]
+    operators = [relocate, relocate_v2, swap, two_opt]
+    # operators = [two_opt]
     # S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
     edge_node_map, head = individual_to_linked_list(S.routes)
     best_cost = S.cost
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
-    start_length = len_routes(head)
-    print("Starting length: " , len_routes(head))
-    i = 0
+    times = []
+    times_two_opt = []
     nearest_neighbors = sp.nearest_neighbors
     for edge in ALL_EDGES:
         for neighboring_edge in nearest_neighbors[edge][1:K+1]:
@@ -566,17 +510,20 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
                 starttime = time.time()
-                modified, best_cost = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], sp, threshold=threshold)
-                if len_routes(head) != start_length:
-                    print("Length after operator:", len_routes(head), operator.__name__, modified)
+                if operator.__name__ == "two_opt":
+                    head, modified, best_cost, edge_node_map = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], edge_node_map, sp, threshold=threshold)
+                else:
+                    modified, best_cost = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], sp, threshold=threshold)
                 endtime = time.time()
-                print(f"{i} round done: time is ", endtime-starttime)
-                i+=1
-                # times.append(endtime-starttime)
+                # if operator.__name__ == "two_opt":
+                #     times_two_opt.append(endtime-starttime)
+                # else:
+                #     times.append(endtime-starttime)
                 # curr_cost = routes_cost(G, sp, S_curr_routes)
                 # if curr_cost < S_best.cost:
                 #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
     # print("AVerage time of each operator:", sum(times)/len(times), "total time:", sum(times), "total number:", len(times))
+    # print("Average time of two opt:", sum(times_two_opt)/len(times_two_opt), "total time:", sum(times_two_opt), "total number:", len(times_two_opt))
     new_routes = linked_list_to_individual(head)
     # print("Best cost in loop:", best_cost, "computed cost:", routes_cost(G, sp, new_routes))
     return Solution(new_routes, S.similarities, best_cost, 0)
