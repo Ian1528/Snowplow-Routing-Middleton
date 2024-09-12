@@ -2,9 +2,15 @@ import initialize
 import dual_graphs
 import construction
 import plotting
+import sectioning_streets.sectioning as sectioning
+import params
 from shortest_paths import ShortestPaths
+from solution import Solution
 from crossover import apply_crossover
 from genetic import run_genetic
+from routes_representations import full_routes
+import folium
+import costs
 
 
 def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=False) -> None:
@@ -53,6 +59,49 @@ def create_instance(params:tuple[str, str]=("smalltoy", "genetic"), take_input=F
 
     return G, G_DUAL
 
+def solve_section(polygon_path: str, label_color: str, path_color: str, required_parts: bool = True, m: folium.Map | None = None) -> tuple[folium.Map, Solution, list]:
+    """
+    Solves the sectioning problem for a given polygon path.
+    Args:
+        polygon_path (str): The path to the polygon file.
+        label_color (str): The color of the labels for the plotted routes.
+        path_color (str): The color of the paths for the plotted routes.
+        required_parts (bool, optional): Flag indicating whether the polygon has non-required and required parts. Defaults to True.
+        m (folium.Map | None, optional): The folium map object. Defaults to None.
+    Returns:
+        folium.Map: The folium map object with the plotted routes.
+        Solution: The solution object.
+        list: The full route.
+    Raises:
+        None
+    Example:
+        solve_section('/path/to/polygon_file', 'red', 'blue', m)
+    """
+    
+    G = sectioning.section_component(polygon_path, required_parts)
+    params.DEPOT = params.find_depot(G)[0]
+
+    print("Depot found, sections done")
+
+    G = initialize.add_multi_edges(G)
+    G_DUAL = dual_graphs.create_dual_streets(G)
+    shortest_paths = ShortestPaths(G_DUAL, False, False)
+
+    print("Shortest paths created, running genetic algorithm")
+    sol = run_genetic(G, shortest_paths)
+
+    full_route = full_routes(shortest_paths, sol.routes)
+    time_seconds = costs.route_travel_time(G, full_route)
+    # Display costs and travel time
+    print("Routes cost", sol.cost)
+    print("Travel time hours", time_seconds/3600)
+
+    # plot
+    G_graph = plotting.add_order_attribute(G, sol.routes)
+    plotting.draw_labeled_multigraph(G_graph, 'order', size=(75,75), plotDepot=True)
+
+    m = plotting.plot_routes_folium(G, full_route, m, label_color, path_color)
+    return m, sol, full_route
 if __name__ == "__main__":
     # 1. Create primal and dual graphs
     G, G_DUAL = create_instance(("smalltoy", "genetic"))

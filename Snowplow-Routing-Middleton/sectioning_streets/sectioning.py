@@ -128,7 +128,11 @@ def section_component(polygon_path: str, required_parts: bool = False) -> nx.Mul
         required_part, not_required_part = load_multiple_polygons(polygon_path)
         G_required = create_sectioned_component(G_full, nodes, edges, required_part)
         G_not_required = create_sectioned_component(G_full, nodes, edges, not_required_part)
-
+        
+        for node in G_not_required.nodes(data=True):
+            if node not in G_required.nodes(data=True):
+                G_required.add_node(node[0], **node[1])
+        
         for edge in G_not_required.edges(data=True, keys=True):
             if edge not in G_required.edges(data=True, keys=True):
                 G_required.add_edge(edge[0], edge[1], key=edge[2], **edge[3])

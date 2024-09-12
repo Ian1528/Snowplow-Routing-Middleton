@@ -2,6 +2,8 @@ import itertools as it
 import matplotlib.pyplot as plt
 import networkx as nx
 from params import find_depot
+import folium
+import folium.plugins
 
 def get_node_pos(G):
     return {node[0]: (node[1]['x'], node[1]['y']) for node in G.nodes(data=True)}
@@ -95,3 +97,34 @@ def add_order_attribute_from_edges(G, routes):
 
 
     return G_graph
+
+
+def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]], m: folium.Map | None, label_color: str, path_color: str):
+    if m is None:
+        m = folium.Map(location=[43.1, -89.5], zoom_start=12)
+    count = 0
+    for i, edge in enumerate(full_route):
+        edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
+            
+        if edge_data is not None:
+                
+            if i < len(full_route)-1:
+                edge_data_next = G.get_edge_data(full_route[i+1][0], full_route[i+1][1], full_route[i+1][2])
+                if edge_data_next is not None and "name" in edge_data_next and "name" in edge_data:
+                    if edge_data_next["name"] == edge_data["name"]:
+                        continue
+            lstring = edge_data['geometry']
+            # swap long lat to lat long
+            lstring = lstring.__class__([(y, x) for x, y in lstring.coords])
+            midpoint = len(list(lstring.coords))//2
+            icon_number = folium.plugins.BeautifyIcon(
+                border_color=label_color,
+                border_width=1,
+                text_color=label_color,
+                number=count,
+                inner_icon_style="margin-top:2;",
+            )
+            folium.PolyLine(locations=lstring.coords, color=path_color, weight=1, tooltip=edge_data).add_to(m)
+            folium.Marker(location=lstring.coords[midpoint], popup=f"Edge {count}", icon=icon_number).add_to(m)
+            count += 1
+    return m
