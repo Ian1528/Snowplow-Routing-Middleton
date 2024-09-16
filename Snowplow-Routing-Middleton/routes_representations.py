@@ -1,4 +1,6 @@
 from shortest_paths import ShortestPaths
+from params import SALT_CAP
+import networkx as nx
 class RouteStep:
     """
     Represents a step in a route.
@@ -86,4 +88,39 @@ def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> 
                     full_route.pop()
             else:
                 full_route.append(edge)
-    return full_route
+    return full_route   
+
+def full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT) -> list[tuple[int, int, int]]:
+    full_route = list()
+    salt_val = SALT_CAP
+    for i in range(len(routes)):
+        for j in range(len(routes[i])):
+            edge = routes[i][j]
+            edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
+
+            # check to see if salt runs out
+            if salt_val - edge_data['salt_per'] < 0:
+                print("Salt running out")
+                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+                full_route.extend(path)
+                salt_val = SALT_CAP
+                continue
+
+            salt_val -= edge_data['salt_per']
+            if j == 0:
+                path = sp.get_shortest_path((DEPOT, DEPOT, 0), edge)
+                full_route.extend(path)
+            elif j+1 < len(routes[i]):
+                next_edge = routes[i][j+1]
+                if edge[1] == next_edge[0]:
+                    full_route.append(edge)
+                else:
+                    path = sp.get_shortest_path(edge, next_edge)
+                    full_route.extend(path)
+                    full_route.pop()
+            else:
+                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+                full_route.extend(path)
+                if i != len(routes)-1:
+                    full_route.pop()
+    return full_route            

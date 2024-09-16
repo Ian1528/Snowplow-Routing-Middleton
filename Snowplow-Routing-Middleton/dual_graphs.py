@@ -21,7 +21,6 @@ def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes:
     - L: nx.MultiDiGraph
         The dual graph created based on the input graph.
     """
-
     L = nx.MultiDiGraph()
     # Create a graph specific edge function.
     for from_node in G.edges(keys=True, data=True):
@@ -48,7 +47,7 @@ def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes:
             shared = [x for x in points if points.count(x) > 1]
             remaining = [e for e in points if e not in [shared[0]]]
             angle_value = angle_between_points(remaining[0], shared[0], remaining[1])
-
+            # cost is turn cost + travel time of the first edge
             L.edges[from_node[:3], to_node[:3], 0]['weight'] = cost_of_dual_node(from_node, angle_value)
             
     if sourceNodes:
@@ -69,9 +68,11 @@ def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes:
 
     if depotSource:
         L.add_node((DEPOT,DEPOT,0))
-        for edge in G.edges((DEPOT,DEPOT,0), keys=True):
-            L.add_edge((DEPOT,DEPOT,0), edge, weight=0)
-        for edge in G.in_edges((DEPOT,DEPOT,0), keys=True, data=True):
+        for edge in G.out_edges(DEPOT, keys=True, data=True):
+            # instant travel from depot onto any road off the depot
+            L.add_edge((DEPOT,DEPOT,0), edge[0:3], weight=0)
+        for edge in G.in_edges(DEPOT, keys=True, data=True):
+            # weight is nonzero to account for travel time of the last edge right before depot
             L.add_edge(edge[0:3], (DEPOT,DEPOT,0), weight=edge[3]['travel_time'])
 
     return L

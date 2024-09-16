@@ -8,7 +8,7 @@ from shortest_paths import ShortestPaths
 from solution import Solution
 from crossover import apply_crossover
 from genetic import run_genetic
-from routes_representations import full_routes
+from routes_representations import full_routes, full_routes_with_returns
 import folium
 import costs
 
@@ -81,16 +81,17 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
     G = sectioning.section_component(polygon_path, required_parts)
     params.DEPOT = params.find_depot(G)[0]
 
-    print("Depot found, sections done")
+    print("Depot found, sections are done")
 
     G = initialize.add_multi_edges(G)
     G_DUAL = dual_graphs.create_dual_streets(G)
-    shortest_paths = ShortestPaths(G_DUAL, False, False)
+    print("Graphs created. Depot is at", params.DEPOT)
+    shortest_paths = ShortestPaths(G_DUAL, False, True)
 
     print("Shortest paths created, running genetic algorithm")
     sol = run_genetic(G, shortest_paths)
 
-    full_route = full_routes(shortest_paths, sol.routes)
+    full_route = full_routes_with_returns(G, shortest_paths, sol.routes, params.DEPOT)
     time_seconds = costs.route_travel_time(G, full_route)
     # Display costs and travel time
     print("Routes cost", sol.cost)

@@ -56,7 +56,6 @@ def find_depot(G: nx.MultiDiGraph) -> tuple[int, dict]:
     Returns:
     - tuple[int, dict]: A tuple containing the ID and attributes of the depot node.
     """
-    
     depX = -89.513456
     depY = 43.123172
 

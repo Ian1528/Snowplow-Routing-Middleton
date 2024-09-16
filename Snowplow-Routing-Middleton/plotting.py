@@ -107,12 +107,13 @@ def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]
         edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
             
         if edge_data is not None:
-                
+            plot_marker = True
+            name = edge_data.get("name", "Unnamed")   
             if i < len(full_route)-1:
                 edge_data_next = G.get_edge_data(full_route[i+1][0], full_route[i+1][1], full_route[i+1][2])
                 if edge_data_next is not None and "name" in edge_data_next and "name" in edge_data:
                     if edge_data_next["name"] == edge_data["name"]:
-                        continue
+                        plot_marker = False
             lstring = edge_data['geometry']
             # swap long lat to lat long
             lstring = lstring.__class__([(y, x) for x, y in lstring.coords])
@@ -125,6 +126,7 @@ def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]
                 inner_icon_style="margin-top:2;",
             )
             folium.PolyLine(locations=lstring.coords, color=path_color, weight=1, tooltip=edge_data).add_to(m)
-            folium.Marker(location=lstring.coords[midpoint], popup=f"Edge {count}", icon=icon_number).add_to(m)
+            if plot_marker:
+                folium.Marker(location=lstring.coords[midpoint], popup=f"Edge {count}: {name}", icon=icon_number).add_to(m)
             count += 1
     return m
