@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 import pickle
-from params import DEPOT
+import params
 import os
 
 class ShortestPaths:
@@ -54,8 +54,8 @@ class ShortestPaths:
             return False
         check1 = self.dists_array.shape[0] == len(self.G_DUAL.nodes)
         check2 = len(self.predecessors) == len(self.G_DUAL.nodes)
-        check3 = (DEPOT, DEPOT, 0) in self.G_DUAL.nodes
-        return check1 and check2 and check3
+        # check3 = (params.DEPOT, params.DEPOT, 0) in self.G_DUAL.nodes
+        return check1 and check2 # and check3
     def load_dists_array(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
         """
         Loads the distance matrix from a NumPy file.

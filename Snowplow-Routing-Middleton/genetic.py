@@ -1,6 +1,6 @@
 from routes_representations import RouteStep
 from shortest_paths import ShortestPaths
-from params import DEPOT, POP_SIZE, BETA, N_ITER, K
+from params import POP_SIZE, BETA, N_ITER, K
 import numpy as np
 import networkx as nx
 from local_search import local_improve
@@ -10,8 +10,7 @@ from costs import routes_cost
 import random
 from solution import Solution
 
-
-def similarity(S1: Solution, S2: Solution) -> int:
+def similarity(S1: Solution, S2: Solution, DEPOT: int) -> int:
     """
     Returns the similarity between two solutions. 
     Defined as the length of the shorter route - number of edge sequences in common
@@ -21,6 +20,7 @@ def similarity(S1: Solution, S2: Solution) -> int:
     Args:
         S1 (Solution): the first solution to compare
         S2 (Solution): the second solution to compare
+        DEPOT (int): the depot node
 
     Returns:
         int: measure of the similarity between the two solutions. 0 means they are identical, while a larger number means they are more different.
@@ -94,7 +94,7 @@ def remove_worst(population: list[Solution], beta: float) -> None:
     del population[np.argmax(ranks)]
 
 
-def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
+def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
     """
     Runs the genetic algorithm to find the optimal solution for snowplow routing.
 
@@ -112,9 +112,9 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
 
     for i in range(POP_SIZE):
         print("initial generation", i)
-        r, rreq = route_generation(G, sp)
-        new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq), 0)
-        new_sol = local_improve(new_sol, G, sp, required_edges, K)
+        r, rreq = route_generation(G, sp, DEPOT)
+        new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq, DEPOT), 0)
+        new_sol = local_improve(new_sol, G, sp, required_edges, DEPOT)
         if(len(new_sol.routes) == 0):
             print("Found empty route after local improve!!")
             raise Exception()
@@ -124,7 +124,7 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
         else:
             # update similarities
             for i in range(len(population)):
-                sim = similarity(population[i], new_sol)
+                sim = similarity(population[i], new_sol, DEPOT)
                 population[i].add_similarity(new_sol, sim)
                 new_sol.add_similarity(population[i], sim)
             population.append(new_sol)
@@ -139,23 +139,21 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths) -> Solution:
         S1 = random.choice(population)
         # select another random solution
         S2 = random.choice(list(S1.similarities.keys()))
-        if (len(S1.routes) == 0) or (len(S2.routes) == 0):
-            print("empty routes, why?")
         # apply crossover to generate new solution
-        routes0 = apply_crossover(G, sp, S1.routes, S2.routes)
+        routes0 = apply_crossover(G, sp, S1.routes, S2.routes, DEPOT)
         if(len(new_sol.routes) == 0):
             print("Found empty route after crossover!!")
             raise Exception()
 
-        new_cost = routes_cost(G, sp, routes0)
+        new_cost = routes_cost(G, sp, routes0, DEPOT)
         new_sol = Solution(routes0, dict(), new_cost, 0)
-        new_sol = local_improve(new_sol, G, sp, required_edges, K)
+        new_sol = local_improve(new_sol, G, sp, required_edges, DEPOT)
         if(len(new_sol.routes) == 0):
             print("Found empty route after localimprove, routes were ", routes0)
             raise Exception()
         # update similarities
         for i in range(len(population)):
-            sim = similarity(population[i], new_sol)
+            sim = similarity(population[i], new_sol, DEPOT)
             population[i].add_similarity(new_sol, sim)
             new_sol.add_similarity(population[i], sim)
         population.append(new_sol)

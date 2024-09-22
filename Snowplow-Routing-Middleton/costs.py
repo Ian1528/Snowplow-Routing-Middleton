@@ -2,14 +2,16 @@ import networkx as nx
 from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
 from routes_representations import RouteStep
-from params import DEPOT, COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR
-def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]]) -> float:
+from params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR
+import params
+def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEPOT: int) -> float:
     """
     Calculate the total travel time of a route.
     
     Parameters:
         G (nx.MultiDiGraph): The graph representing the street network.
         route (list[tuple[int, int, int]]: The route to be evaluated.
+        DEPOT (int): The depot node.
     Returns:
         float: The total travel time of the route.
     """
@@ -81,13 +83,14 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
 
-def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, head) -> float:
+def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, head, DEPOT: int) -> float:
     """
     Calculates the total cost of a route represented as a linked list of edges.
     Parameters:
         G (nx.MultiDiGraph): The graph representing the network.
         shortest_paths (ShortestPaths): The object containing the shortest paths information.
         head (Node): The head node of the linked list.
+        DEPOT (int): The depot node.
     Returns:
         float: The total cost of the route.
     """
@@ -119,7 +122,7 @@ def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, h
     for i in range(3):
         total_cost += all_costs[i]*COST_WEIGHTS[i]
     return total_cost
-def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> float:
+def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT: int) -> float:
     """
     Calculates the total cost of a full set of routes, represented as a 2d list of routestep objects.
 
@@ -127,6 +130,7 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
         G (nx.Graph): the graph of the network
         shortest_paths (ShortestPaths): the shortestpaths object related to that graph (used for getting costs)
         routes (list[list[RouteStep]]): the routes to be evaluated
+        DEPOT (int): the depot node
 
     Returns:
         float: the cost of the route

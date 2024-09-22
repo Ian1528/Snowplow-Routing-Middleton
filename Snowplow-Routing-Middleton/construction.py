@@ -7,7 +7,8 @@ from routes_representations import RouteStep, FullRoute
 from costs import single_edge_cost
 from collections import deque
 from turns import angle_between_vectors, turn_direction
-from params import DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
+from params import SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
+import params
 
 edges_serviced = 0
 def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:
@@ -394,7 +395,7 @@ def calc_total_required_edges(G: nx.Graph) -> int:
             total_required += 1
     return total_required
 
-def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[RouteStep]], list[list[tuple[int, int, int]]]]:
+def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[list[list[RouteStep]], list[list[tuple[int, int, int]]]]:
     """
     Generates a full set of routes given a street network.
     Makes a copy of the original graph to avoid modifying the original.
@@ -402,16 +403,15 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[Ro
     Args:
         G (nx.Graph): the graph representing the street network
         sp_model (ShortestPaths): the shortest paths model to use for finding the shortest path
+        DEPOT (int): The depot node
     Returns:
         tuple[list[list[RouteStep]], list[list[RouteStep]]]: Two lists. 
         The first contains all instructions and connected paths, while the second contains a list of only the RouteSteps which were non-deadheading
     """
     global edges_serviced
-
     G_copy = G.copy()
     curr_salt = SALT_CAP
     curr_node = DEPOT
-    
     edges_serviced = 0
     total_required = calc_total_required_edges(G_copy)
 
@@ -420,7 +420,6 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths) -> tuple[list[list[Ro
 
     partial_route: list[RouteStep] = list()
     partial_route_required: list[tuple[int, int, int]] = list()
-    
     while all_serviced(total_required) == False:
         partial_route, partial_route_required = RCA(G_copy, curr_node, partial_route, partial_route_required, DEPOT, curr_salt, sp_model, routes_only_required)
         

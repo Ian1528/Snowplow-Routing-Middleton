@@ -5,7 +5,7 @@ import networkx as nx
 from costs import routes_cost
 from shortest_paths import ShortestPaths
 from routes_representations import RouteStep
-from params import DEPOT, KAPPA
+from params import KAPPA
 
 def combine(routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[int, int, int]]]) -> tuple[list[list[tuple[int, int, int]]], int]:
     """
@@ -33,7 +33,7 @@ def combine(routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[
     return routes0, remove_index
 
 
-def remove_duplicates(changed_route_index: int, routes: list[list[tuple[int, int, int]]], sp: ShortestPaths):
+def remove_duplicates(changed_route_index: int, routes: list[list[tuple[int, int, int]]], sp: ShortestPaths, DEPOT: int):
     """
     Remove all duplicated edges in a set of routes by choosing the one that minimizes distance.
     Modifies the existing list in-place
@@ -42,6 +42,7 @@ def remove_duplicates(changed_route_index: int, routes: list[list[tuple[int, int
         changed_route_index (int): index of insertion, which may have added duplicates.
         routes (list[list[RouteStep]]): set of current routes
         sp (ShortestPaths): corresponding shortest paths object
+        DEPOT (int): depot node
     """
     added_route = routes[changed_route_index]
     for h in range(len(routes)):
@@ -122,7 +123,7 @@ def get_missing_edges(G: nx.MultiDiGraph, routes: list[list[tuple[int, int, int]
 
 #     return best_routes
 
-def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[int, int, int]]], sp: ShortestPaths, K: int) -> list[list[tuple[int, int, int]]]:
+def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[int, int, int]]], sp: ShortestPaths, N: int, DEPOT: int,) -> list[list[tuple[int, int, int]]]:
     """
     Inserts an edge into the graph greedily. Finds the cost with respect to each insertion point
     Args:
@@ -130,6 +131,8 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[in
         edge (RouteStep): the edge to be inserted
         routes (list[list[RouteStep]]): the current set of routes
         sp (ShortestPaths): shortest paths object corresponding to the graph
+        N (int): number of nearest neighbors to consider
+        DEPOT (int): depot node
 
     Returns:
         list[list[RouteStep]]: the new set of routes with the edge inserted
@@ -137,7 +140,7 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[in
     best_cost = math.inf
     best_routes = None
 
-    neighbors = [tuple(i) for i in sp.nearest_neighbors[edge][1:K+1]]
+    neighbors = [tuple(i) for i in sp.nearest_neighbors[edge][1:N+1]]
     for route_id in range(len(routes)):
         route = routes[route_id]
 
@@ -147,7 +150,7 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[in
 
             new_route = route[:i] + [edge] + route[i:]
             new_full_routes = routes[:route_id] + [new_route] + routes[route_id+1:]
-            new_cost = routes_cost(G, sp, new_full_routes)
+            new_cost = routes_cost(G, sp, new_full_routes, DEPOT)
             if new_cost < best_cost:
                 best_cost = new_cost
                 best_routes = new_full_routes
@@ -156,7 +159,7 @@ def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[in
 
 
 
-def apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[int, int, int]]]) -> list[list[tuple[int, int, int]]]:
+def apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[int, int, int]]], DEPOT: int) -> list[list[tuple[int, int, int]]]:
     """
     Takes two full sets of routes and returns the crossover between them
 
@@ -165,14 +168,15 @@ def apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[tu
         sp (ShortestPaths): shortest paths object corresponding to the graph network
         routes1 (list[list[RouteStep]]): the first set of routes
         routes2 (list[list[RouteStep]]): the second set of routes
+        DEPOT (int): the depot node
 
     Returns:
         list[list[RouteStep]]: new set of routes
     """
     routes0, change_index = combine(routes1, routes2)
 
-    remove_duplicates(change_index, routes0, sp)
+    remove_duplicates(change_index, routes0, sp, DEPOT)
 
     for edge in get_missing_edges(G, routes0):
-        routes0 = insert_edge(G, edge, routes0, sp, KAPPA)
+        routes0 = insert_edge(G, edge, routes0, sp, KAPPA, DEPOT)
     return routes0

@@ -1,9 +1,8 @@
 from turns import angle_between_points, angle_between_vectors
 import networkx as nx
 from costs import cost_of_dual_node
-from params import DEPOT
-
-def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
+import params
+def create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
     """
     Creates a dual graph based on the given input graph from real streets data. 
     This function works with geometry linestring
@@ -67,6 +66,7 @@ def create_dual_streets(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes:
             L.add_edge(node, str(node[1]) + "_source", weight=0)
 
     if depotSource:
+        print("Adding depot source", DEPOT)
         L.add_node((DEPOT,DEPOT,0))
         for edge in G.out_edges(DEPOT, keys=True, data=True):
             # instant travel from depot onto any road off the depot
@@ -96,6 +96,7 @@ def create_dual_toy(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes: boo
     - L: nx.MultiDiGraph
         The dual graph created based on the input graph.
     """
+    DEPOT = params.DEPOT
     L = nx.MultiDiGraph()
     # Create a graph specific edge function.
     for from_node in G.edges(keys=True, data=True):

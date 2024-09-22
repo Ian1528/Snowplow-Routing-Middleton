@@ -80,19 +80,20 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
     
     G = sectioning.section_component(polygon_path, required_parts)
     params.DEPOT = params.find_depot(G)[0]
-
+    DEPOT = params.DEPOT
     print("Depot found, sections are done")
 
     G = initialize.add_multi_edges(G)
-    G_DUAL = dual_graphs.create_dual_streets(G)
+    G_DUAL = dual_graphs.create_dual_streets(G, DEPOT)
     print("Graphs created. Depot is at", params.DEPOT)
     shortest_paths = ShortestPaths(G_DUAL, False, True)
 
     print("Shortest paths created, running genetic algorithm")
-    sol = run_genetic(G, shortest_paths)
+    sol = run_genetic(G, shortest_paths, DEPOT)
 
-    full_route = full_routes_with_returns(G, shortest_paths, sol.routes, params.DEPOT)
-    time_seconds = costs.route_travel_time(G, full_route)
+    full_route = full_routes_with_returns(G, shortest_paths, sol.routes, DEPOT)
+
+    time_seconds = costs.route_travel_time(G, full_route, DEPOT)
     # Display costs and travel time
     print("Routes cost", sol.cost)
     print("Travel time hours", time_seconds/3600)
