@@ -167,6 +167,33 @@ def is_culdesac(G: nx.MultiDiGraph, node: int) -> bool:
 
     return G.out_degree(node) == 1 and G.in_degree(node) == 1 and attrb['highway'] == 'residential' and attrb['reversed'] == True and attrb['length'] < 500
 
+passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":2, "secondary":3, "primary":3, "motorway":6}
+small_roads = ["motorway_link", "tertiary_link", "secondary_link", "primary_link", "unclassified"]
+def calc_passes(oneway: bool, width: float, highway: str, roadtype: str) -> int:
+    """
+    Calculates the number of passes required for a given road segment.
+
+    Parameters:
+        oneway (bool): Whether the road segment is one-way.
+        width (float): The width of the road segment.
+        highway (str): The type of the road segment.
+
+    Returns:
+        int: The number of passes required for the road segment.
+    """
+    if highway in small_roads:
+        return 1
+    if np.isnan(width) and roadtype != "Blvd":
+        return passes_keys[highway]//2 if oneway else passes_keys[highway]
+    
+    if roadtype == "Blvd":
+        return 2 if oneway else 4
+
+    if width <= 36:
+        return 1 if oneway else 2
+    else:
+        return 1 if oneway else 3
+    
 def create_full_streets() -> nx.MultiDiGraph:
     """
     Creates a full streets network graph
@@ -189,7 +216,6 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['maintainer'] = np.array(street_gdf['Maintained'])
     G = ox.graph_from_gdfs(nodes, edges)
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
-    passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
     priorities = np.empty(len(edges))
     passes = np.empty(len(edges))
@@ -204,10 +230,13 @@ def create_full_streets() -> nx.MultiDiGraph:
 
         highway_type = data['highway']
         length_meters = data['length']
-    
+        width = data['width']
+        roadtype = data['roadtype']
+        oneway = data['oneway']
+
         if street_gdf.iloc[index]['Jurisdicti'] == "City":
             priorities[index] = priority_keys[highway_type]
-            passes[index] = passes_keys[highway_type]
+            passes[index] = calc_passes(oneway, width, highway_type, roadtype)
             salt[index] = get_salt_from_length(length_meters)
             serviced[index] = False
         else:
@@ -216,7 +245,7 @@ def create_full_streets() -> nx.MultiDiGraph:
             salt[index] = 0
             serviced[index] = True
         
-        if highway_type == "residential" or highway_type == "tertiary":
+        if highway_type == "residential":
             plow_time[index] = length_meters / PLOW_SPEED_RESIDENTIAL
         else:
             plow_time[index] = length_meters / PLOW_SPEED_HIGHWAY
@@ -227,6 +256,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['serviced'] = serviced
     edges['culdesac'] = culdesac
     edges['travel_time'] = plow_time
+
     G = ox.graph_from_gdfs(nodes, edges)
     for edge in G.edges(data=True, keys=True):
         if 'roadtype' in edge[3]:

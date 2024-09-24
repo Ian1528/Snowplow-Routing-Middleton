@@ -2,7 +2,7 @@ import networkx as nx
 from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
 from routes_representations import RouteStep
-from params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR
+from params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR, SALT_CAP
 import params
 def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEPOT: int) -> float:
     """
@@ -100,18 +100,25 @@ def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, h
     deadhead_cost = 0
     time = 0
 
+    salt_val = SALT_CAP
+
     node = head.next
     while node.next != None:
         edge = node.data
-        if not node.is_route_end:
-            next_edge = node.next.data
-            time_cost += shortest_paths.get_dist(edge, next_edge)
-        else:
-            time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
-        # penalize priorities
+        next_edge = node.next.data
         edge_data = G[edge[0]][edge[1]][edge[2]]
+
+        if salt_val - edge_data['salt_per'] < 0 or node.is_route_end:
+            time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
+            salt_val = SALT_CAP
+            time_cost += shortest_paths.get_dist((DEPOT,DEPOT,0), next_edge)
+        else:
+            time_cost += shortest_paths.get_dist(edge, next_edge)
+
+        # penalize priorities
         time += edge_data['travel_time']
         priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
+        salt_val -= edge_data['salt_per']
         node = node.next            
     # penalize deadheading
     for edge in G.edges(data=True):
@@ -139,25 +146,27 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
     priority_cost = 0
     deadhead_cost = 0
     time = 0
-    for route in routes:
-        for i in range(len(route)):
-            edge = route[i]
 
-            # penalize the turn
-            if i+1 < len(route):
-                next_edge = route[i+1]
-                # add cost, which incorpates turn penalties already
-                time_cost += shortest_paths.get_dist(edge, next_edge) 
-            else:
-                # last required edge in the route, consider return to DEPOT
-                time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
-
-            # penalize priorities
+    salt_val = SALT_CAP
+    for i in range(len(routes)):
+        route = routes[i]
+        for j in range(len(route)):
+            edge = route[j]
             edge_data = G[edge[0]][edge[1]][edge[2]]
+
+            next_edge = route[j+1] if j+1 < len(route) else routes[i+1][0] if i+1 < len(routes) else None
+
+            if salt_val - edge_data['salt_per'] < 0 or j == len(route)-1:
+                time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
+                salt_val = SALT_CAP
+                if next_edge is not None:
+                    time_cost += shortest_paths.get_dist((DEPOT,DEPOT,0), next_edge)
+            else:
+                time_cost += shortest_paths.get_dist(edge, next_edge)
+            # penalize priorities
             time += edge_data['travel_time']
             priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
-            
-        # penalize number of returns to depot
+
     # penalize deadheading
     for edge in G.edges(data=True):
         deadhead_cost += edge[2]['deadheading_passes']

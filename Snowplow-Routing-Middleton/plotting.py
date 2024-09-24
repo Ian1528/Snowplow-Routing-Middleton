@@ -138,6 +138,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
     count = 0
     current_time = datetime.datetime.now()
     features = list()
+    point_features = list()
     for i, edge in enumerate(full_route):
         edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
         current_time = current_time + datetime.timedelta(minutes=1)#.split('.')[0]
@@ -178,7 +179,26 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
                     },
                 }
             }
+            point_feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": list(lstring.coords)[-1]
+                },
+                "properties": {
+                    "times": [str(current_time)],
+                    "popup": f"Edge {count}: {name}",
+                    "icon": "circle",
+                    "iconstyle":{
+                        "fillColor": "red",
+                        "fillOpacity": .5,
+                        "radius": 2,
+                    },
+                    "style": {"weight": 0},
+                }
+            }
             features.append(feature)
+            point_features.append(point_feature)
             folium.PolyLine(locations=lat_long_coords, color="black", weight=1, tooltip=edge_data).add_to(m)
             # if plot_marker:
             #     folium.Marker(location=lstring.coords[midpoint], popup=f"Edge {count}: {name}", icon=icon_number).add_to(m)
@@ -191,6 +211,15 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         period="PT1M",
         add_last_point=False,
         # duration="PT5M",
+    ).add_to(m)
+    folium.plugins.TimestampedGeoJson(
+        {
+            "type": "FeatureCollection",
+            "features": point_features,
+        },
+        period="PT1M",
+        add_last_point=False,
+        duration="PT1M",
     ).add_to(m)
 
 

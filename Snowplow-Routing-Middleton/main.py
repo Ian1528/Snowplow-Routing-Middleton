@@ -103,7 +103,8 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
     plotting.draw_labeled_multigraph(G_graph, 'order', size=(75,75), plotDepot=True)
 
     m = plotting.plot_routes_folium(G, full_route, m, label_color, path_color)
-    return m, sol, full_route
+    m_dynamic = plotting.plot_moving_routes_folium(G, full_route, None, label_color, path_color)
+    return m, m_dynamic, sol, full_route
 if __name__ == "__main__":
     # 1. Create primal and dual graphs
     G, G_DUAL = create_instance(("smalltoy", "genetic"))
