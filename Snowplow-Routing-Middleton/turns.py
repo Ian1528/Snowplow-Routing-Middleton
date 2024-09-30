@@ -1,4 +1,5 @@
 from math import atan2
+import networkx as nx
 from math import pi
 
 def angle_between_points(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
@@ -63,3 +64,16 @@ def turn_direction(angle: float) -> str:
         return "sharp right"
     else:
         return "u-turn"
+
+def turn_direction_count(G_DUAL: nx.MultiDiGraph, full_route: list[tuple[int, int, int]]) -> tuple[dict[str:int], list[str], list[int]]:
+    turns_hist = dict()
+    for i in range(len(full_route) -1 ):
+        attrb = G_DUAL.get_edge_data(full_route[i], full_route[i+1])
+        if attrb is None:
+            continue
+        if "angle" in attrb[0].keys():
+            angle = attrb[0]["angle"]
+            turns_hist[turn_direction(angle)] = turns_hist.get(turn_direction(angle), 0) + 1
+    x_axis_bins = ["straight", "right", "sharp right", "left", "sharp left", "u-turn"]
+    y_axis = [turns_hist.get(turn, 0) for turn in x_axis_bins]
+    return turns_hist, x_axis_bins, y_axis

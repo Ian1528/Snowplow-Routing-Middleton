@@ -48,6 +48,7 @@ def create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, 
             angle_value = angle_between_points(remaining[0], shared[0], remaining[1])
             # cost is turn cost + travel time of the first edge
             L.edges[from_node[:3], to_node[:3], 0]['weight'] = cost_of_dual_node(from_node, angle_value)
+            L.edges[from_node[:3], to_node[:3], 0]['angle'] = angle_value
             
     if sourceNodes:
         # add source and target nodes
@@ -119,7 +120,6 @@ def create_dual_toy(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes: boo
             v = (v_x, v_y)
             w = (w_x, w_y)
             angle_value = angle_between_vectors(v,w)
-
             L.edges[from_node[:3], to_node[:3], 0]['weight'] = cost_of_dual_node(from_node, angle_value)
     
     if sourceNodes:

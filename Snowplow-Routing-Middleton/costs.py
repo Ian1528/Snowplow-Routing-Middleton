@@ -78,8 +78,7 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     """
     weight = first_edge[3]['travel_time']
     # add the turn penalty cost
-    turn_penalty = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 4}
-    
+    turn_penalty = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 1000000}
     weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
 
