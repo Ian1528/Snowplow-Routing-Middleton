@@ -1,13 +1,22 @@
 import networkx as nx
 import numpy as np
 import pickle
-import params
 import os
 
 class ShortestPaths:
     """
     Class to compute and store shortest paths in a graph.
+
+    Attributes:
+        dists_array_path (str): Path to the NumPy file storing the distance matrix.
+        preds_and_dists_path (str): Path to the pickle file storing the predecessors and distances.
+    
+    Methods:
+        get_dist(edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> float: returns the shortest distance between two edges of the graph.
+        get_shortest_path(edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> list: returns the shortest path between two edges of the primal graph.
     """
+    dists_array_path = os.path.dirname(__file__) + "\\graph_data\\shortest_distances_array.npy"
+    preds_and_dists_path = os.path.dirname(__file__) + "\\graph_data\\preds_and_dists.pickle"
 
     def __init__(self, G_DUAL, load_data=True, save_data=False):
         self.G_DUAL: nx.MultiDiGraph = G_DUAL
@@ -56,12 +65,9 @@ class ShortestPaths:
         check2 = len(self.predecessors) == len(self.G_DUAL.nodes)
         # check3 = (params.DEPOT, params.DEPOT, 0) in self.G_DUAL.nodes
         return check1 and check2 # and check3
-    def load_dists_array(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
+    def load_dists_array(self):
         """
         Loads the distance matrix from a NumPy file.
-
-        Args:
-            filename (str): The path to the NumPy file.
 
         Raises:
             Exception: If there is no data to load.
@@ -69,17 +75,14 @@ class ShortestPaths:
         # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            self.dists_array = np.load(filename)
+            self.dists_array = np.load(ShortestPaths.dists_array_path)
         except:
             self.dists_array = None
             print("No data to fetch")
     
-    def save_dists_array(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\shortest_distances_array.npy"):
+    def save_dists_array(self):
         """
         Saves the distance matrix to a NumPy file.
-
-        Args:
-            filename (str): The path to save the NumPy file.
 
         Raises:
             Exception: If there is no data to save. First compute the distance matrix before saving.
@@ -88,9 +91,9 @@ class ShortestPaths:
 
         if self.dists_array is None:
             raise Exception("No data to save. First compute the distance matrix before saving")
-        np.save(filename, self.dists_array)
+        np.save(ShortestPaths.dists_array_path, self.dists_array)
 
-    def load_pred_and_dist(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\preds_and_dists.pickle"):
+    def load_pred_and_dist(self):
         """
         Loads the predecessors and distances from a pickle file.
 
@@ -103,13 +106,13 @@ class ShortestPaths:
         # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            with open(filename, 'rb') as f:
+            with open(ShortestPaths.preds_and_dists_path, 'rb') as f:
                 self.predecessors = pickle.load(f)
         except:
             self.predecessors = None
             print("No data to fetch")
 
-    def save_pred_and_dist(self, filename="C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\preds_and_dists.pickle"):
+    def save_pred_and_dist(self):
         """
         Saves the predecessors and distances to a pickle file.
 
@@ -119,10 +122,9 @@ class ShortestPaths:
         Raises:
             Exception: If there is no data to save. The predecessors and distances must be computed first.
         """
-        # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
         if self.predecessors is None:
             raise Exception("No data to save. First compute predecessors and distances")
-        with open(filename, 'wb') as f:
+        with open(ShortestPaths.preds_and_dists_path, 'wb') as f:
             pickle.dump(self.predecessors, f)
         
 
@@ -160,15 +162,13 @@ class ShortestPaths:
         Returns:
             dict: A dictionary where the keys are the nodes in the graph and the values are arrays of nearest neighbors.
         """
-        index_edge_dict = {index: edge for index, edge in enumerate(self.G_DUAL.nodes)}
-
         nearest_neighbors = dict()
         for i in range(self.dists_array.shape[0]):
             nearest_neighbors[self.index_edge_dict[i]] = np.empty(self.dists_array.shape[1],dtype='i,i,i')
             sorted_indices = np.argsort(self.dists_array[i], axis=0)
             for j in range(len(sorted_indices)):
                 correct_index = sorted_indices[j]
-                nearest_neighbors[index_edge_dict[i]][j] = index_edge_dict[correct_index]
+                nearest_neighbors[self.index_edge_dict[i]][j] = self.index_edge_dict[correct_index]
         return nearest_neighbors
     
     def get_shortest_path(self, edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> list:
@@ -188,6 +188,9 @@ class ShortestPaths:
             raise Exception("Graph and parameters don't match. Recompute paths")
 
 if __name__ == "__main__":
-    from main import G_DUAL
-    sp = ShortestPaths(G_DUAL, load_data=False, save_data=True)
-    print("Done")
+    # from main import G_DUAL
+    # sp = ShortestPaths(G_DUAL, load_data=False, save_data=True)
+    # print("Done")
+    print(ShortestPaths.dists_array_path)
+    print(os.path.dirname(__file__))
+    print(os.path.dirname(os.path.realpath(__file__)))
