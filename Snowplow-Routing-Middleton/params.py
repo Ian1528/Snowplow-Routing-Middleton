@@ -1,3 +1,27 @@
+"""
+This module defines various parameters and a function for finding the depot node in a graph.
+
+Constants:
+- DEPOT (int): The ID of the depot node.
+- SALT_CAP (int): The salt capacity of the vehicle.
+- PLOW_SPEED_RESIDENTIAL (float): The plowing speed in residential areas (m/s).
+- PLOW_SPEED_HIGHWAY (float): The plowing speed on highways (m/s).
+- ALPHA (int): A parameter for route construction.
+- SELECTION_WEIGHTS (list[float]): Weights for selection criteria.
+- RAND_THRESH (float): Threshold for random selection.
+- COST_WEIGHTS (list[float]): Weights for cost function components.
+- TURN_WEIGHT (float): Weight for turns in the cost function.
+- PRIORITY_SCALE_FACTOR (float): Scale factor for priority in the cost function.
+- K (int): Parameter for local search.
+- KAPPA (int): Number of nearest neighbors to consider when inserting an edge in crossover algorithm.
+- POP_SIZE (int): Population size for the genetic algorithm.
+- N_ITER (int): Number of iterations for the genetic algorithm.
+- BETA (float): Parameter for the genetic algorithm.
+
+Functions:
+- find_depot(G: nx.MultiDiGraph) -> tuple[int, dict]:
+
+"""
 import math
 import networkx as nx
 # graph construction and vehicle caps
@@ -28,25 +52,6 @@ N_ITER = 25
 BETA = .7
 
 # parameters = [DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS]
-
-def set_params(params: dict) -> None:
-    """
-    Writes the parameters to the params file.
-
-    Args:
-        params (dict): dictionary of parameter values.
-    """
-    names = {}
-    # if params == None:
-    
-    # else:
-
-
-
-def read_params():
-    """
-    
-    """
 
 def find_depot(G: nx.MultiDiGraph) -> tuple[int, dict]:
     """
