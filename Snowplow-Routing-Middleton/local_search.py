@@ -1,32 +1,57 @@
-from routes_representations import RouteStep, FullRoute
+"""
+This module provides functions for local search operators and the local improvement algorithm.
+
+Functions:
+    local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], DEPOT: int, threshold: float = 1) -> Solution:
+    - Takes a current solution and runs the local improvement algorithm.
+"""
 from shortest_paths import ShortestPaths
 from solution import Solution
-from params import K, SALT_CAP
+from params import K
 from costs import routes_cost, routes_cost_linked_list
-import copy
 import random
 import networkx as nx
-import params
 class Node:
-    def __init__(self, data: tuple[int, int, int], next: "Node" = None, prev: "Node" = None, is_route_end: bool = False, route_belong: str = "OLD"):
+    """
+    A class used to represent a Node in a doubly linked list.
+
+    Attributes
+    ----------
+    data : tuple[int, int, int]
+        A tuple containing three integers representing the edge of the graph.
+    next : Node, optional
+        A reference to the next node in the list (default is None).
+    prev : Node, optional
+        A reference to the previous node in the list (default is None).
+    is_route_end : bool, optional
+        A boolean indicating if the node is the end of a route (default is False).
+    
+    Methods
+    -------
+    __str__():
+        Returns a string representation of the node and its connections.
+    __repr__():
+        Returns a string representation of the node and its connections.
+    """
+    
+    def __init__(self, data: tuple[int, int, int], next: "Node" = None, prev: "Node" = None, is_route_end: bool = False):
         self.data = data
         self.next = next
         self.prev = prev
         self.is_route_end = is_route_end
-        self.route_belong = route_belong
 
     def __str__(self):
-        return f"{self.prev.data if self.prev else None} -> [{self.data}] -> {self.next.data if self.next else None} {self.route_belong}"
+        return f"{self.prev.data if self.prev else None} -> [{self.data}] -> {self.next.data if self.next else None}"
     def __repr__(self):
         return str(self)
 
 def swap_steps(x: Node, y: Node):
     """
-    Swaps two routesteps
+    Swaps two nodes in a doubly linked list.
 
     Args:
-        x (RouteStep): first routestep
-        y (RouteStep): second routestep
+        x (Node): first node
+        y (Node): second node
     """
     xNext = x.next
     xPrev = x.prev
@@ -70,11 +95,11 @@ def swap_steps(x: Node, y: Node):
 
 def insert(x: Node, y: Node):
     """
-    Inserts step x after step y
+    Inserts node x after node y
 
     Args:
-        x (RouteStep): step to be inserted
-        y (RouteStep): step to insert after
+        x (Node): Node to be inserted
+        y (Node): Node to insert after
     """
     oldXprev = x.prev
 
@@ -97,10 +122,11 @@ def insert(x: Node, y: Node):
 def reverse_list(n1: Node, n2: Node):
     """
     Reverses the linked list between node1 and node2, inclusive. Node 1 comes before node 2.
-    Assumes that node1 and node2 aren't the head or tail of the linked list. Never touching the dummy heads and tails
+    Assumes that node1 and node2 aren't the head or tail of the linked list, since we never touch the dummy heads and tails
+    
     Args:
-        node1 (RouteStep): The first routestep.
-        node2 (RouteStep): The second routestep.
+        node1 (Node): The first node.
+        node2 (Node): The second node.
 
     Returns:
         None
@@ -141,16 +167,18 @@ def reverse_list(n1: Node, n2: Node):
         n2.is_route_end = False
         n1.is_route_end = True
 
-def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -> Node:
+def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -> tuple[dict[tuple[int, int, int], Node], Node]:
     """
-    Converts a list of routes to a linked list representation. This is useful for local search operators
+    Converts a list of routes to a linked list representation.
 
     Args:
         S (list[list[RouteStep]]): the list of routes
         DEPOT (int): the depot node
 
     Returns:
-        dict[tuple[int, int, int]: RouteStep], RouteStep: a dictionary of edges to RouteStep objects and the head of the linked list
+        tuple: A tuple containing:
+        - edge_node_map (dict[tuple[int, int, int], Node]): A dictionary mapping each route step to its corresponding Node.
+        - head (Node): The head node of the linked list.
     """
     head = Node((DEPOT, DEPOT, 0))
     tail = Node((DEPOT, DEPOT, 0))
@@ -184,7 +212,13 @@ def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -
 
     return edge_node_map, head
 
-def print_linked_list(head: Node):
+def print_linked_list(head: Node) -> None:
+    """
+    Prints the linked oist starting from the head
+
+    Args:
+        head (Node): head of the linked list
+    """
     node = head.next
     count = 0
     while node != None:
@@ -192,9 +226,19 @@ def print_linked_list(head: Node):
         if node.is_route_end:
             count += 1
         node = node.next
-    print("route end counT:", count)
 
 def linked_list_to_individual(head: Node) -> list[list[tuple[int, int, int]]]:
+    """
+    Converts a linked list of nodes into a list of routes.
+    Each node in the linked list contains data and a flag indicating the end of a route.
+    This function traverses the linked list, collects the data from each node, and groups
+    them into routes based on the end-of-route flag.
+    Args:
+        head (Node): The head node of the linked list.
+    Returns:
+        list[list[tuple[int, int, int]]]: A list of routes, where each route is a list of tuples.
+    """
+
     full_routes = []
     curr_route = []
     node = head.next
@@ -212,19 +256,21 @@ def linked_list_to_individual(head: Node) -> list[list[tuple[int, int, int]]]:
     return full_routes
 
 
-def relocate(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> bool:
+def relocate(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> tuple[bool, float]:
     """
-    Relocates edge1 after edge2 in the route. Returns the new set of modified routes
+    Relocates edge1 after edge2 in the route. Returns whether the move was accepted and the cost of the total route.
 
     Args:
-        routes_old (list[list[RouteStep]]): old set of routes
-        edge1 (tuple[int, int, int]): first edge to be moved
-        edge2 (tuple[int, int, int]): second edge
-        indices1 (tuple[int, int], optional): the indices of the first edge. Defaults to None.
-        indices2 (tuple[int, int], optional): indices of the second edge. Defaults to None.
-        threshold: threshold of acceptance. If the new cost is less than the old cost * threshold, the move is accepted
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        edge1 (Node): The edge to be relocated.
+        edge2 (Node): The edge after which edge1 will be relocated.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        tuple[bool, float]: A tuple containing a boolean indicating whether the move was accepted and the new cost of the route.
     """
     edge1prev = edge1.prev
 
@@ -235,39 +281,22 @@ def relocate(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2
     else:
         insert(edge1, edge1prev)
         return False, old_cost
-    try:
-        # precompute the cost of the operation
-        cost_old = sp.get_dist(edge2.data, edge2.next.data) + sp.get_dist(edge1.data, edge1.next.data) + sp.get_dist(edge1.prev.data, edge1.data) 
-        cost_new = sp.get_dist(edge2.data, edge1.data) + sp.get_dist(edge1.data, edge2.next.data) + sp.get_dist(edge1.prev.data, edge1.next.data)
 
-        # if cost is better, proceed with the move. Otherwise, return the old routes
-        if cost_new < cost_old * threshold:
-            insert(edge1, edge2)
-            return True
-        
-        # try swapping the other way
-        cost_new = sp.get_dist(edge1.data, edge2.data) + sp.get_dist(edge2.data, edge1.next.data) + sp.get_dist(edge2.prev.data, edge2.next.data)
-        if cost_new < cost_old * threshold:
-            insert(edge2, edge1)
-            return True
-        return False
-    
-    except:
-        return False
-
-def relocate_v2(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> bool:
+def relocate_v2(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> tuple[bool, float]:
     """
-    Moves edge1 and the edge immediately following after edge2.
+    Inserts edge1 and the next edge after edge2 in the route. Returns whether the move was accepted and the cost of the total route.
 
     Args:
-        routes_old (list[list[RouteStep]]): old set of routes
-        edge1 (tuple[int, int, int]): first edge to be moved
-        edge2 (tuple[int, int, int]): second edge
-        indices1 (tuple[int, int], optional): the indices of the first edge. Defaults to None.
-        indices2 (tuple[int, int], optional): indices of the second edge. Defaults to None.
-
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        edge1 (Node): The edge to be relocated.
+        edge2 (Node): The edge after which edge1 will be relocated.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        tuple[bool, float]: A tuple containing a boolean indicating whether the move was accepted and the new cost of the route.
     """
     edge1_next = edge1.next
     edge1_prev = edge1.prev
@@ -286,31 +315,24 @@ def relocate_v2(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edg
         insert(edge1_next, edge1)
         return False, old_cost
     
-    try:
-        cost_old = sp.get_dist(edge2.data, edge2.next.data) + sp.get_dist(edge1.prev.data, edge1.data) + sp.get_dist(edge1.next.data, edge1.next.next.data)
-        cost_new = sp.get_dist(edge2.data, edge1.data) + sp.get_dist(edge1.next.data, edge2.next.data) + sp.get_dist(edge1.prev.data, edge1.next.next.data)
-
-        if cost_new < cost_old * threshold:
-            insert(edge1, edge2)
-            insert(edge1_next, edge1)
-            return True
-        return False
-    except:
-        return False
-
-def swap(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> bool:
+def swap(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> tuple[bool, float]:
     """
-    Swaps edge1 with edge2.
+    Swaps edge1 with edge2. Returns whether the move was accepted and the cost of the total route.
 
     Args:
-        routes_old (list[list[RouteStep]]): old set of routes
-        edge1 (tuple[int, int, int]): first edge to be moved
-        edge2 (tuple[int, int, int]): second edge
-        indices1 (tuple[int, int], optional): the indices of the first edge. Defaults to None.
-        indices2 (tuple[int, int], optional): indices of the second edge. Defaults to None.
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        edge1 (Node): The first edge to be swapped.
+        edge2 (Node): The second edge to be swapped.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
 
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        tuple[bool, float]: A tuple where the first element is a boolean indicating whether the swap was accepted,
+        and the second element is the cost of the total route after the swap.
+
     """
     swap_steps(edge1, edge2)
     new_cost = routes_cost_linked_list(G, sp, head, DEPOT)
@@ -322,14 +344,15 @@ def swap(G: nx.MultiDiGraph, head: Node, old_cost: float,edge1: Node, edge2: Nod
 
 def find_route_end_two_steps(edge1: Node, edge2: Node, DEPOT: int) -> tuple[Node, Node] | tuple[None, None]:
     """
-    Finds the last step in the route that both steps is a part of, and returns none if step2 comes before step1 in the same route.
-    Useful to save time in two-opt intra-route
+    Finds the last step in the route that two edges are a part of, and returns none if step2 comes before step1 in the same route.
+    Useful to save time in two-opt intra-route for early termination.
 
     Args:
-        step (RouteStep): the step
-
+        edge1 (Node): first edge
+        edge2 (Node): second edge
+        DEPOT (int): depot node
     Returns:
-        RouteStep: the last step in the route, or None if step2 comes before step1 in the same route
+        tuple[Node, Node]: The last step in the route that edge1 and edge2 are a part of. None if edge2 comes before edge1 in the same route.
     """
     curr_step2 = edge2
 
@@ -345,16 +368,28 @@ def find_route_end_two_steps(edge1: Node, edge2: Node, DEPOT: int) -> tuple[Node
 
     return curr_step1, curr_step2
 
-def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, edge_node_map: dict, sp: ShortestPaths, DEPOT: int, threshold: float) -> bool:
+def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, edge_node_map: dict[tuple[int,int,int], Node], sp: ShortestPaths, DEPOT: int, threshold: float) -> tuple[Node, bool, float, dict]:
     """
-    Two-opt operator for steps in the same route
+    Two-opt operator for steps in the same route. Called by the two_opt function.
+     
+    Reverses the order of traversal of the edges between the two indicated edges within the route.
 
     Args:
-        step1 (RouteStep): first step
-        step2 (RouteStep): second step
-
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        edge1 (Node): The first edge to be swapped.
+        edge2 (Node): The second edge to be swapped.
+        edge_node_map (dict[tuple[int, int, int], Node]): A dictionary mapping each edge to its corresponding Node.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        tuple[Node, bool, float, dict]: A tuple containing:
+        - head (Node): The head node of the linked list representing the route.
+        - bool: A boolean indicating whether the move was accepted.
+        - float: The new cost of the total route.
+        - dict: A dictionary mapping each edge to its corresponding Node.
     """
     reverse_list(edge1, edge2)
     new_cost = routes_cost_linked_list(G, sp, head, DEPOT)
@@ -364,25 +399,40 @@ def two_opt_intra_route(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: 
         reverse_list(edge2, edge1)
         return head, False, old_cost, edge_node_map
 
-def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, original_edge1: Node, original_edge2: Node, original_edge1end: Node, original_edge2end: Node, original_edge_node_map: dict, sp: ShortestPaths, DEPOT: int, threshold: float) -> bool:
+def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, original_edge1: Node, original_edge2: Node, original_edge1end: Node, original_edge2end: Node, original_edge_node_map: dict, sp: ShortestPaths, DEPOT: int, threshold: float) -> tuple[Node, bool, float, dict]:
     """
-    Two-opt operator for steps in different routes
+    Two-opt operator for steps in different routes. Called by the two_opt function.
+    
+    Swaps the edges (and all of their successors) between the two routes.
 
     Args:
-        step1 (RouteStep): first step
-        step2 (RouteStep): second step
-
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        original_edge1 (Node): The first edge to be swapped.
+        original_edge2 (Node): The second edge to be swapped.
+        original_edge1end (Node): The end of the route that the first edge is in.
+        original_edge2end (Node): The end of the route that the second edge is in.
+        original_edge_node_map (dict[tuple[int, int, int], Node]): A dictionary mapping each edge to its corresponding Node.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        tuple[Node, bool, float, dict]: A tuple containing:
+        - head (Node): The head node of the linked list representing the route.
+        - bool: A boolean indicating whether the move was accepted.
+        - float: The new cost of the total route.
+        - dict: A dictionary mapping each edge to its corresponding Node.
     """
+
     # create a copy of the linked list
-    new_head = Node((DEPOT, DEPOT, 0), route_belong="New")
+    new_head = Node((DEPOT, DEPOT, 0))
     new_edge_node_map = dict()
     prev_node = new_head
     
     node = head.next
     while node != None:
-        new_node = Node(node.data, is_route_end=node.is_route_end, route_belong="NEW")
+        new_node = Node(node.data, is_route_end=node.is_route_end)
         new_node.prev = prev_node
         prev_node.next = new_node
         prev_node = new_node
@@ -399,6 +449,7 @@ def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, origina
         new_edge_node_map[node.data] = new_node
         node = node.next
 
+    # swap the edges between the routes, including their successors
     old_edge1end_next = edge1end.next
     old_edge2end_next = edge2end.next
 
@@ -428,13 +479,14 @@ def two_opt_inter_route(G: nx.MultiDiGraph, head: Node, old_cost: float, origina
         edge2.prev = edge1prev
         edge1end.next = old_edge2end_next
         old_edge2end_next.prev = edge1end
+
     new_cost = routes_cost_linked_list(G, sp, new_head, DEPOT)
 
     if new_cost < old_cost * threshold:
         return new_head, True, new_cost, new_edge_node_map
     return head, False, old_cost, original_edge_node_map
     
-def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, edge_node_map: dict, sp: ShortestPaths, DEPOT: int, threshold: float = 1) -> list[list[RouteStep]]:
+def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, edge_node_map: dict, sp: ShortestPaths, DEPOT: int, threshold: float = 1) -> tuple[Node, bool, float, dict]:
     """
     Reverse the order of traversal of the edges between the two indicated edges within the route. This is a swap with a reversal
     Example: two opt between b and f:
@@ -445,14 +497,23 @@ def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2:
     a->b->c->d->e->f->g and p->q->r->s->t->u->v becomes a->b->r->s->t->u->v and p->q->c->d->e->f->g
 
     Args:
-        routes_old (list[list[RouteStep]]): old set of routes
-        edge1 (tuple[int, int, int]): first edge to be moved
-        edge2 (tuple[int, int, int]): second edge
-        indices1 (tuple[int, int], optional): the indices of the first edge. Defaults to None.
-        indices2 (tuple[int, int], optional): indices of the second edge. Defaults to None.
+        G (nx.MultiDiGraph): The graph representing the routes.
+        head (Node): The head node of the linked list representing the route.
+        old_cost (float): The current cost of the route.
+        edge1 (Node): The first edge to be swapped.
+        edge2 (Node): The second edge to be swapped.
+        edge_node_map (dict[tuple[int, int, int], Node]): A dictionary mapping each edge to its corresponding Node.
+        sp (ShortestPaths): An object to compute shortest paths.
+        DEPOT (int): The depot node identifier.
+        threshold (float, optional): The threshold for accepting the new route cost. Defaults to 1.
 
     Returns:
-        list[list[RouteStep]]: new set of modified routes
+        Returns:
+        tuple[Node, bool, float, dict]: A tuple containing:
+        - head (Node): The head node of the linked list representing the route.
+        - bool: A boolean indicating whether the move was accepted.
+        - float: The new cost of the total route.
+        - dict: A dictionary mapping each edge to its corresponding Node.
     """
 
     edge1end, edge2end = find_route_end_two_steps(edge1, edge2, DEPOT)
@@ -461,7 +522,7 @@ def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2:
     if edge1end == None:
         return head, False, old_cost, edge_node_map
 
-    # if the endedges are the very tail, we want the previous edge
+    # if the endedges are the tail of the last route, we want the previous edge
     if edge1end.next == None:
         edge1end = edge1end.prev
     if edge2end.next == None:
@@ -471,39 +532,30 @@ def two_opt(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2:
         return two_opt_intra_route(G, head, old_cost, edge1, edge2, edge_node_map, sp, DEPOT, threshold)
     else:
         return two_opt_inter_route(G, head, old_cost, edge1, edge2, edge1end, edge2end, edge_node_map, sp, DEPOT, threshold)
-# def len_routes(head: Node):
-#     node = head.next
-#     count = 0
-#     while node != None and node.data != (DEPOT, DEPOT, 0):
-#         count += 1
-#         node = node.next
-#     return count
+
 def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], DEPOT: int, threshold: float = 1) -> Solution:
     """
-    Takes a current solution and runs the local improvement algorithm. First, the four local search operators are randomly shuffled.
-    Then, for the k-nearest neighbors of each edge, every operator is applied and accepted if it reduces the route cost.
+    Takes a current solution and runs the local improvement algorithm. 
+    
+    First, the four local search operators are randomly shuffled. Then, for the k-nearest neighbors of each edge, 
+    every operator is applied and accepted if it reduces the route cost.
 
     Args:
         S (Solution): current solution
         G (nx.MultiDiGraph): graph representing the street network
         sp (ShortestPaths): corresponding shortest paths object, needed to compute nearest neighbors
         required_edges (set[tuple[int, int, int]]): set of required edges in the graph network
-        K (int, optional): the number of nearest edges to explore. Defaults to 3.
-
+        DEPOT (int): depot node identifier
+        threshold (float, optional): threshold for accepting a new route cost. Defaults to 1.
     Returns:
         Solution: the new solution after local improvement
     """
-    import time
     ALL_EDGES = [edge for route in S.routes for edge in route if edge != (DEPOT,DEPOT,0)]
     operators = [relocate, relocate_v2, swap, two_opt]
-    # operators = [two_opt]
-    # S_new = copy.deepcopy(S) # deepcopy so that all the routesteps are copied #TODO: make sure it is deepcopying
     edge_node_map, head = individual_to_linked_list(S.routes, DEPOT)
     best_cost = S.cost
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
-    times = []
-    times_two_opt = []
     nearest_neighbors = sp.nearest_neighbors
     for edge in ALL_EDGES:
         for neighboring_edge in nearest_neighbors[edge][1:K+1]:
@@ -511,23 +563,11 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 neighboring_edge = tuple(neighboring_edge)
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
-                starttime = time.time()
                 if operator.__name__ == "two_opt":
                     head, modified, best_cost, edge_node_map = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], edge_node_map, sp, DEPOT, threshold=threshold)
                 else:
                     modified, best_cost = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], sp, DEPOT, threshold=threshold)
-                endtime = time.time()
-                # if operator.__name__ == "two_opt":
-                #     times_two_opt.append(endtime-starttime)
-                # else:
-                #     times.append(endtime-starttime)
-                # curr_cost = routes_cost(G, sp, S_curr_routes)
-                # if curr_cost < S_best.cost:
-                #     S_best = Solution(S_curr_routes, dict(), curr_cost, 0)
-    # print("AVerage time of each operator:", sum(times)/len(times), "total time:", sum(times), "total number:", len(times))
-    # print("Average time of two opt:", sum(times_two_opt)/len(times_two_opt), "total time:", sum(times_two_opt), "total number:", len(times_two_opt))
     new_routes = linked_list_to_individual(head)
-    # print("Best cost in loop:", best_cost, "computed cost:", routes_cost(G, sp, new_routes))
     return Solution(new_routes, S.similarities, best_cost, 0)
 
 

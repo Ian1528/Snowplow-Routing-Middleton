@@ -8,7 +8,7 @@ from shortest_paths import ShortestPaths
 from solution import Solution
 from crossover import apply_crossover
 from genetic import run_genetic
-from routes_representations import full_routes, full_routes_with_returns
+from routes_representations import create_full_routes, create_full_routes_with_returns
 import folium
 import costs
 
@@ -91,7 +91,7 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
     print("Shortest paths created, running genetic algorithm")
     sol = run_genetic(G, shortest_paths, DEPOT)
 
-    full_route = full_routes_with_returns(G, shortest_paths, sol.routes, DEPOT)
+    full_route = create_full_routes_with_returns(G, shortest_paths, sol.routes, DEPOT)
 
     time_seconds = costs.route_travel_time(G, full_route, DEPOT)
     # Display costs and travel time
