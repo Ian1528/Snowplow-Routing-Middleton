@@ -3,16 +3,23 @@ from params import SALT_CAP
 import networkx as nx
 class RouteStep:
     """
-    Represents a step in a route.
+    Represents a step in a route. 
 
     Attributes:
-        node1 (int): The starting node of the step.
-        node2 (int): The ending node of the step.
-        id (int): The id of the step (identifier for parallel edges)
-        deadheaded (bool): Indicates whether the step was a deadhead (non-serviced) move.
-        hadOptions (bool): Indicates whether the step had multiple options for routing. Could have gone a different direction
-        saltval (int): Indicates the amount of salt the vehicle had before traversing the arc. Useful for checking validity of solution
-        next (RouteStep): The next step in the route
+        node1 (int): The starting node of the edge.
+        node2 (int): The ending node of the edge.
+        edge_id (int): The key of the edge in the multigraph.
+        deadheaded (bool): Indicates if the step was a deadhead.
+        options (bool): Indicates whether there were other edges to possibly traverse at this step.
+        saltval (int): The remaining salt value in the truck for the route step.
+        next (RouteStep): The next step in the route.
+        prev (RouteStep): The previous step in the route.
+        route_id (int): The identifier of the route.
+        is_route_end (bool): Indicates if this step is the end of the route before returning to the depot.
+    Methods:
+        __str__(): Returns a string representation of the route step.
+        __repr__(): Returns a string representation of the route step.
+        get_edge() -> tuple[int, int, int]: Returns the tuple representation of the route step.
     """
     def __init__(self, node1: int=None, node2: int=None, edge_id: int=None, deadheaded: bool=False, options: bool=False, saltval: int = 0, next: "RouteStep"=None, prev: "RouteStep"=None, route_id: int = -1, is_route_end: bool = False):
         self.node1 = node1
@@ -48,22 +55,8 @@ class RouteStep:
             tuple[int, int, int]: A tuple containing the node1, node2, and edge_id of the route step.
         """
         return (self.node1, self.node2, self.edge_id)
-    
-class FullRoute:
-    def __init__(self, root: RouteStep=None, length: int=0, cost: int=0, routes_data: list[tuple[RouteStep, RouteStep, int]] = []):
-        self.root = root
-        self.length = length
-        self.cost = cost
-        self.routes_data = routes_data
-    
-    def print_full(self) -> None:
-        node: RouteStep = self.root
-
-        while node is not None:
-            print(node)
-            node = node.next
-    
-def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> list[tuple[int, int, int]]:
+        
+def create_full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> list[tuple[int, int, int]]:
     """
     Generates a full route by connecting the given routes using the ShortestPaths object.
 
@@ -82,6 +75,8 @@ def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> 
             if next_edge is not None:
                 if edge[1] == next_edge[0]:
                     full_route.append(edge)
+
+                # if the next edge is not connected to the current edge, find the shortest path between them
                 else:
                     path = sp.get_shortest_path(edge, next_edge)
                     full_route.extend(path)
@@ -90,7 +85,25 @@ def full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> 
                 full_route.append(edge)
     return full_route   
 
-def full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT) -> list[tuple[int, int, int]]:
+def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT: int) -> list[tuple[int, int, int]]:
+    """
+    Create full routes with returns to the depot when salt runs out.
+
+    This function generates a complete route for snowplowing, ensuring that the 
+    snowplow returns to the depot to refill salt when it runs out. It uses the 
+    shortest paths to navigate between edges and the depot.
+
+    Args:
+        G (nx.MultiDiGraph): The graph representing the road network.
+        sp (ShortestPaths): An object that provides shortest path calculations.
+        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route 
+            is a list of edges represented as tuples (start_node, end_node, key).
+        DEPOT (int): The node representing the depot location.
+
+    Returns:
+        list[tuple[int, int, int]]: A list of edges representing the full route, including returns to the depot when salt runs out.
+    """
+    
     full_route = list()
     salt_val = SALT_CAP
     for i in range(len(routes)):
@@ -100,7 +113,6 @@ def full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list
 
             # check to see if salt runs out
             if salt_val - edge_data['salt_per'] < 0:
-                print("Salt running out")
                 path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
                 full_route.extend(path)
                 salt_val = SALT_CAP
