@@ -46,7 +46,7 @@ def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> flo
     if prev is None:
         return cost
     # with a previous node, we incorporate turning penalites
-    turn_cost = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 4}
+    turn_cost = {"straight": 0, "right": 10, "left": 25, "sharp right": 15, "sharp left": 30, "u-turn": 180} # correspond to added seconds. Uturns + 3 minutes, left turns + 30 seconds
 
     v_x = G.nodes[curr]['x']-G.nodes[prev]['x']
     v_y = G.nodes[curr]['y']-G.nodes[prev]['y']
@@ -78,7 +78,7 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
     """
     weight = first_edge[3]['travel_time']
     # add the turn penalty cost
-    turn_penalty = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 1000000}
+    turn_penalty = {"straight": 0, "right": 10, "left": 25, "sharp right": 15, "sharp left": 30, "u-turn": 180} # correspond to added seconds. Uturns + 3 minutes, left turns + 30 seconds
     weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
 

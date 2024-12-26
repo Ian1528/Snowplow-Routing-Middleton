@@ -107,6 +107,17 @@ def load_multiple_polygons(path: str) -> tuple[shapely.Polygon, shapely.Polygon]
     not_required_part = polygon.geometry[~polygon.is_required]
     return required_part.iloc[0], not_required_part.iloc[0]
 
+def create_cul_de_sac_graph() -> nx.MultiDiGraph:
+    nodes, edges, G_full = get_full_streets_nodes_edges()
+    # change all non cul-de-sac edges to have a priority of 0
+    for edge in G_full.edges(data=True, keys=True):
+        if edge[3]['culdesac'] == False:
+            G_full[edge[0]][edge[1]][edge[2]]['priority'] = 0
+            G_full[edge[0]][edge[1]][edge[2]]['salt_per'] = 0
+            G_full[edge[0]][edge[1]][edge[2]]['serviced'] = True
+    
+    G_full = config_sectioned_component(G_full)
+    return G_full
 
 def section_component(polygon_path: str, required_parts: bool = False) -> nx.MultiDiGraph:
     """

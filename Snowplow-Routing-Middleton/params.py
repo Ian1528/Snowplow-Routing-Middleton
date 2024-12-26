@@ -14,7 +14,7 @@ RAND_THRESH = 0.2
 
 # cost function
 COST_WEIGHTS = [.8, .1, .1]
-TURN_WEIGHT = 0.01
+TURN_WEIGHT = 1
 PRIORITY_SCALE_FACTOR = .0005
 # local search
 K = 3

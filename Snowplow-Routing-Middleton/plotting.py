@@ -191,8 +191,8 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
                     "icon": "circle",
                     "iconstyle":{
                         "fillColor": "red",
-                        "fillOpacity": .5,
-                        "radius": 2,
+                        "fillOpacity": 1,
+                        "radius": 5,
                     },
                     "style": {"weight": 0},
                 }
@@ -219,7 +219,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         },
         period="PT1M",
         add_last_point=False,
-        duration="PT1M",
+        duration="PT45S",
     ).add_to(m)
 
 
