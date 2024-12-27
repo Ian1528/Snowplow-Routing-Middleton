@@ -1,17 +1,23 @@
+"""
+This module provides functions for the initial, greedy route construction algorithm
+
+Functions:
+ - route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[list[list[RouteStep]], list[list[RouteStep]]]:
+    Generates a full set of routes given a street network.
+"""
 import networkx as nx
 import math
 from shortest_paths import ShortestPaths
 import random
 import numpy as np
-from routes_representations import RouteStep, FullRoute
+from routes_representations import RouteStep
 from costs import single_edge_cost
 from collections import deque
 from turns import angle_between_vectors, turn_direction
 from params import SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
-import params
 
 edges_serviced = 0
-def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:
+def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:
     
     """
     Visits an arc and updates the current route and graph information. 
@@ -19,10 +25,12 @@ def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, cu
     
     Parameters:
         G (networkx.Graph): The graph representing the network
-        arc (tuple): The arc to be visited
-        route (list): The partial route taken so far (default: partial_route)
+        arc (tuple[int, int, int]): The arc to be visited
+        route (list[RouteStep]): The partial route taken so far, represented as a list of RouteStep objects
         options (bool): Flag indicating whether there were other directions for the route to take.
-        all_prev_routes_required (list): List of all previous routes so far
+        curr_salt (int): The current value of salt at this point of the route
+        route_required (list[tuple[int, int, int]]): List of all required edges in the route so far
+        all_prev_routes_required (list): List of all previous routes so far with only required edges
         undirected (bool): Flag indicating if the graph is undirected (default: False)
     Returns:
         int: The new node that the arc is on
@@ -66,20 +74,20 @@ def visit_arc(G: nx.Graph, arc: tuple, route: list[RouteStep], options: bool, cu
         G[from_node][to_node][id]['deadheading_passes'] += 1
         new_routestep.deadheaded = True
     
-    if len(route) != 0:
-        if route[-1].node1 == new_routestep.node1 and route[-1].node2 == new_routestep.node2 and route[-1].edge_id == new_routestep.edge_id:
-            print("Retraversing same edge immediately")
-            print("Current route:")
-            for step in route:
-                print(step)
-            print("New arc to visit:", arc)
+    # if len(route) != 0:
+    #     if route[-1].node1 == new_routestep.node1 and route[-1].node2 == new_routestep.node2 and route[-1].edge_id == new_routestep.edge_id:
+    #         print("Retraversing same edge immediately")
+    #         print("Current route:")
+    #         for step in route:
+    #             print(step)
+    #         print("New arc to visit:", arc)
 
     route.append(new_routestep)
     return to_node, curr_salt
 
 
 
-def process_node(G: nx.Graph, prev: int, curr: int) -> tuple[list[tuple[int, int, int, dict]], int, int]:
+def get_required_edges_from_node(G: nx.Graph, prev: int, curr: int) -> tuple[list[tuple[int, int, int, dict]], int, int]:
     """
     Identifies all required edges leaving a node.
 
@@ -107,20 +115,22 @@ def process_node(G: nx.Graph, prev: int, curr: int) -> tuple[list[tuple[int, int
 
 
 
-def return_to_depot(G: nx.Graph, DEPOT: int, previous: RouteStep, route_up_to_now: list[RouteStep], route_required: list[tuple[int, int, int]], salt: int, shortest_paths_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]], options=False) -> None:
+def return_to_depot(G: nx.Graph, DEPOT: int, route_up_to_now: list[RouteStep], route_required: list[tuple[int, int, int]], salt: int, shortest_paths_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]], options=False) -> int:
     """
     Returns to the depot via the shortest path, updating any required arcs along the way. 
 
     Args:
         G (nx.Graph): The graph representing the current network
         DEPOT: The depot of this graph/network
-        start_node (int): The starting point where the route is currently at
         route_up_to_now (list[RouteStep]): A list of the full current route with deadheading included
         route_required (list[RouteStep]): A list of the full current route without deadheading
         salt (int): Current value of salt
         shortest_paths_model (ShortestPaths): The shortest paths model to use for finding the shortest path
         all_prev_routes_required (list): List of all previous routes so far
         options (bool, optional): Whether the route had options at this point. Defaults to False.
+    
+    Returns:
+        int: The depot node
     """
     if len(route_up_to_now) == 0:
         Exception("Already at depot. This should never happen")
@@ -136,7 +146,7 @@ def return_to_depot(G: nx.Graph, DEPOT: int, previous: RouteStep, route_up_to_no
 
 def has_edge_within_capacity(G: nx.Graph, node: int, curr_salt: int) -> bool:
     """
-    Determines whether the current node has a required edge within the capacity restrictions
+    Determines whether the current node has a required edge leading off it within the capacity restrictions
     of the vehicle.
 
     Args:
@@ -201,13 +211,13 @@ def find_nearest_required(G : nx.Graph, source: int, salt: int) -> None | list[t
                     return reversed_nodes_to_edges(G, node_path_reversed)
     return None
 
-def reversed_nodes_to_edges(G: nx.Graph, node_path: list[int]) -> list[tuple[int, int, int]]:
+def reversed_nodes_to_edges(G: nx.MultiDiGraph, node_path: list[int]) -> list[tuple[int, int, int]]:
     """
     Takes a sequences of nodes, reverses them, and returns the shortest path traversing
-    that list of reversed nodes. Helper function for find_nearest_require
+    that list of reversed nodes. Helper function for find_nearest_required
 
     Args:
-        G (nx.Graph): graph representing the network
+        G (nx.MultiDiGraph): graph representing the network
         node_path (list[int]): list of nodes in the path
 
     Returns:
@@ -229,7 +239,7 @@ def reversed_nodes_to_edges(G: nx.Graph, node_path: list[int]) -> list[tuple[int
     return edge_path
 
 
-def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, weights: list[float, float, float], random_threshold: float) -> list[tuple[int, int, dict]]:
+def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, weights: list[float, float, float], random_threshold: float) -> tuple[int, int, dict]:
     """
     Selects an arc from a Restricted Candidate List (RCL) based on various weights.
 
@@ -242,16 +252,14 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     Precondition: sum of weights is 1.
 
     Returns:
-    - The selected arc from the RCL.
+    - tuple[int,int,dict]:
+        The selected arc from the RCL.
 
     Algorithm:
     1. If the previous node is None or a random number is greater than 0.8, choose an arc randomly from the RCL.
-    2. Calculate weights for each arc in the RCL based on turn direction, degree of the next node, and priority.
+    2. Otherwise, calculate weights for each arc in the RCL based on turn direction, degree of the next node, and priority.
     3. Normalize the sum of the weights.
-    4. Choose an arc based on the weights, where higher weights are more likely to be chosen.
-
-    Note:
-    - The angle, turn_direction, and angle functions are assumed to be defined elsewhere.
+    4. Choose an arc randomly based on the weights, where higher weights are more likely to be chosen.
 
     """
 
@@ -328,7 +336,7 @@ def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: lis
         G (networkx.Graph): The graph representing the road network.
         curr_node (int): The current node in the route.
         route (list[RouteStep]): The current route.
-        route_required (list[RouteStep]): The list of already serviced edges in the current route.
+        route_required (list[tuple[int, int, int]]): The list of already serviced edges in the current route.
         DEPOT (int): The depot node.
         curr_salt (float): The current salt level.
         sp_model (ShortestPaths): The shortest paths model to use for finding the shortest path.
@@ -340,7 +348,7 @@ def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: lis
     while True:
         prev_node = route[-1].node1 if len(route) > 0 else None
 
-        required_arcs, c_min, c_max = process_node(G, prev_node, curr_node)
+        required_arcs, c_min, c_max = get_required_edges_from_node(G, prev_node, curr_node)
         rcl = [] # initialize restricted candidate list
         
         for edge in required_arcs:
@@ -362,7 +370,7 @@ def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: lis
             # no more required arcs in the graph that we can service, so we're done.
             # return to the depot and refill salt cap
             if path is None:
-                curr_node = return_to_depot(G, DEPOT, curr_node, route, route_required, curr_salt, sp_model, options=False, all_prev_routes_required=all_prev_routes_required)
+                curr_node = return_to_depot(G, DEPOT, route, route_required, curr_salt, sp_model, options=False, all_prev_routes_required=all_prev_routes_required)
                 return route, route_required
             
             # otherwise go to the arc to visit
@@ -406,7 +414,7 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
         DEPOT (int): The depot node
     Returns:
         tuple[list[list[RouteStep]], list[list[RouteStep]]]: Two lists. 
-        The first contains all instructions and connected paths, while the second contains a list of only the RouteSteps which were non-deadheading
+        The first contains a continuous set of routes, while the second contains only the required edges of the route (so no deadheading edges are included).
     """
     global edges_serviced
     G_copy = G.copy()

@@ -1,9 +1,24 @@
+"""
+This module provides functions to calculate various costs associated with snowplow routing on a street network graph.
+
+Functions:
+    route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEPOT: int) -> float:
+        Calculate the total travel time of a route.
+    single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> float:
+        Returns the cost of traversing an edge between two nodes given the previous node.
+    cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> float:
+        Calculate the cost of visiting a node in the dual graph based on turn directions and travel times.
+    routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, head, DEPOT: int) -> float:
+        Calculates the total cost of a route represented as a linked list of edges.
+    routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT: int) -> float:
+        Calculates the total cost of a full set of routes, represented as a 2D list of route step objects.
+"""
+
 import networkx as nx
 from turns import angle_between_vectors, turn_direction
 from shortest_paths import ShortestPaths
-from routes_representations import RouteStep
 from params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR, SALT_CAP
-import params
+
 def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEPOT: int) -> float:
     """
     Calculate the total travel time of a route.
@@ -26,7 +41,7 @@ def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEP
     return travel_time
 def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> float:
     """
-    Returns the cost of traversing an edge between two nodes. 
+    Returns the cost of traversing an edge between two nodes given the previous node.
     Cost is based on travel time and turn direction.
 
     Args:
@@ -64,7 +79,8 @@ def single_edge_cost(G: nx.Graph, prev: int, curr: int, nxt: int, k: int) -> flo
 
 def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> float:
     """
-    Calculate the weighted degree of a node in a graph. Helper for ``create_dual``.
+    Calculate the cost of visiting a node in the dual graph based on turn directions and travel times.
+    Helper for ``create_dual``.
     
     Parameters:
         first_edge (tuple[int, int, int, dict]): The dual node, which is an edge in the primal graph.
