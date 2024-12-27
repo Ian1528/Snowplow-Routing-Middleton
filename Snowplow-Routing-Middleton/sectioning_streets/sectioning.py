@@ -19,7 +19,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
  
 # importing the module
-from initialize import create_full_streets, config_graph_attributes
+from initialize import create_full_streets, add_node_weighted_degree
 
 def config_sectioned_component(G: nx.MultiDiGraph) -> nx.MultiGraph:
     """
@@ -38,7 +38,7 @@ def config_sectioned_component(G: nx.MultiDiGraph) -> nx.MultiGraph:
             G.remove_node(j) # remove all but the strongest connected component from G
     
     G = nx.convert_node_labels_to_integers(G)
-    config_graph_attributes(G)
+    add_node_weighted_degree(G)
     return G
 
 def fill_missing_node_coords(G_sectioned: nx.MultiDiGraph, G_osm: nx.MultiDiGraph):

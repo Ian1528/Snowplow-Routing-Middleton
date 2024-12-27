@@ -1,9 +1,21 @@
+"""
+This module provides functions to initialize and manipulate graphs for snowplow routing in Middleton.
+Functions:
+    create_small_toy() -> nx.MultiDiGraph:
+        Creates a small toy graph for snowplow routing in Middleton.
+    create_small_streets() -> nx.MultiDiGraph:
+        Creates a graph instance for the small streets network graph.
+    create_full_streets() -> nx.MultiDiGraph:
+        Creates a full streets network graph.
+"""
+
 import pandas as pd
 import osmnx as ox
 import numpy as np
 import geopandas as gpd
 import networkx as nx
 import pickle
+import os
 from params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
 
 
@@ -44,7 +56,7 @@ def add_toy_street_info(G: nx.Graph) -> None:
             attrb['salt_per'] = 0
             attrb['serviced'] = True
 
-def config_graph_attributes(G: nx.Graph) -> None:
+def add_node_weighted_degree(G: nx.Graph) -> None:
     """
     Configures the graph attributes by calculating the weighted degree for each node
     and adding a new attribute called "deadheading_passes" to each edge.
@@ -66,7 +78,7 @@ def config_graph_attributes(G: nx.Graph) -> None:
     nx.set_edge_attributes(G, 0, "deadheading_passes")
 
 
-def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv", nodeFile="Snowplow-Routing-Middleton/graph_data/nodes.csv") -> nx.MultiDiGraph:
+def create_small_toy() -> nx.MultiDiGraph:
     """
     Create a small toy graph for snowplow routing in Middleton.
 
@@ -75,11 +87,12 @@ def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv",
     Sets the weighted degree as a node attribute.
     Sets the deadheading_passes attribute of all edges to 0.
     Sets all edges to initially be unserviced
+
     Returns:
         G (networkx.MultiDiGraph): The constructed graph.
-
     """
-    
+    edgeFile = os.path.dirname(__file__) + "/graph_data/edges.csv"
+    nodeFile = os.path.dirname(__file__) + "/graph_data/nodes.csv"
     edgelist = pd.read_csv(edgeFile)
     nodelist = pd.read_csv(nodeFile)
 
@@ -104,7 +117,7 @@ def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv",
 
 def create_small_streets() -> nx.MultiDiGraph:
     """
-    Creates a small streets network graph.
+    Creates a graph instance for the small streets network graph.
 
     Returns:
         nx.MultiDiGraph: The small streets network graph.
@@ -124,7 +137,7 @@ def create_small_streets() -> nx.MultiDiGraph:
             G.remove_node(j) # remove all but the strongest connected component from G
 
     add_toy_street_info(G)
-    config_graph_attributes(G)
+    add_node_weighted_degree(G)
 
     # add geometry attribute to all edges
     nodes, edges = ox.graph_to_gdfs(G)
@@ -202,10 +215,13 @@ def create_full_streets() -> nx.MultiDiGraph:
         nx.MultiDiGraph: The full scale streets network
     """
     # Read the shapefile
-    street_gdf = gpd.read_file("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\OSMWithData.gpkg")
+    osm_data_filepath = os.path.dirname(__file__) + "/graph_data/OSMWithData.gpkg"
 
+    street_gdf = gpd.read_file(osm_data_filepath)
+
+    osm_graph_filepath = os.path.dirname(__file__) + "/graph_data/streets_graph.pickle"
     # Read the OSM Graph
-    G = pickle.load(open("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\streets_graph.pickle", 'rb'))
+    G = pickle.load(open(osm_graph_filepath, 'rb'))
     G = nx.convert_node_labels_to_integers(G)
 
     nodes, edges = ox.graph_to_gdfs(G) # better than momepy b/c fills in missing geometry attributes
@@ -272,7 +288,7 @@ def create_full_streets() -> nx.MultiDiGraph:
         for j in i:
             G.remove_node(j) # remove all but the strongest connected component from G
 
-    config_graph_attributes(G)
+    add_node_weighted_degree(G)
     return G
 def add_multi_edges(G: nx.Graph) -> nx.MultiDiGraph:
     """
