@@ -1,3 +1,9 @@
+"""
+This module provides functions for the crossover operation to combine two routes.
+Functions:
+    apply_crossover(G: nx.MultiDiGraph, sp: ShortestPaths, routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[int, int, int]]], DEPOT: int) -> list[list[tuple[int, int, int]]]:
+        Takes two full sets of routes and returns the crossover between them.
+"""
 import copy
 import math
 import numpy as np
@@ -33,7 +39,7 @@ def combine(routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[
     return routes0, remove_index
 
 
-def remove_duplicates(changed_route_index: int, routes: list[list[tuple[int, int, int]]], sp: ShortestPaths, DEPOT: int):
+def remove_duplicates(changed_route_index: int, routes: list[list[tuple[int, int, int]]], sp: ShortestPaths, DEPOT: int) -> None:
     """
     Remove all duplicated edges in a set of routes by choosing the one that minimizes distance.
     Modifies the existing list in-place
@@ -94,34 +100,6 @@ def get_missing_edges(G: nx.MultiDiGraph, routes: list[list[tuple[int, int, int]
 
     missing_edges = required_edges-set(condensed_routes)
     return missing_edges
-
-
-# def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[int, int, int]]], sp: ShortestPaths) -> list[list[tuple[int, int, int]]]:
-#     """
-#     Inserts an edge into the graph greedily. Finds the cost with respect to each insertion point
-#     Args:
-#         G (nx.MultiDiGraph): graph representing network
-#         edge (RouteStep): the edge to be inserted
-#         routes (list[list[RouteStep]]): the current set of routes
-#         sp (ShortestPaths): shortest paths object corresponding to the graph
-
-#     Returns:
-#         list[list[RouteStep]]: the new set of routes with the edge inserted
-#     """
-#     best_cost = math.inf
-#     best_routes = None
-#     for route_id in range(len(routes)):
-#         route = routes[route_id]
-
-#         for i in range(len(route)+1):
-#             new_route = route[:i] + [edge] + route[i:]
-#             new_full_routes = routes[:route_id] + [new_route] + routes[route_id+1:]
-#             new_cost = routes_cost(G, sp, new_full_routes)
-#             if new_cost < best_cost:
-#                 best_cost = new_cost
-#                 best_routes = new_full_routes
-
-#     return best_routes
 
 def insert_edge(G: nx.MultiDiGraph, edge: RouteStep, routes : list[list[tuple[int, int, int]]], sp: ShortestPaths, N: int, DEPOT: int,) -> list[list[tuple[int, int, int]]]:
     """

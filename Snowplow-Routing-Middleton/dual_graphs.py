@@ -1,6 +1,15 @@
+"""
+This module provides functions to convert edge-based graphs to node-based graphs. 
+The node-based graphs are used to represent turn angles and travel costs in a street network.
+Functions:
+- create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
+    This function works with geometry linestring objects to calculate turn angles.
+- create_dual_toy(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
+    Uses x,y coords embedded in toy primal graph instead of lat, long of streets data.
+"""
 from turns import angle_between_points, angle_between_vectors
-import networkx as nx
 from costs import cost_of_dual_node
+import networkx as nx
 import params
 def create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
     """
@@ -11,6 +20,8 @@ def create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, 
     Parameters:
     - G: nx.MultiDiGraph
         The input graph on which the dual graph will be based.
+    - DEPOT: int
+        The depot node of the graph.
     - depotSource: bool, optional (default=True)
         Specifies whether to add a depot source node to the dual graph.
     - sourceNodes: bool, optional (default=False)

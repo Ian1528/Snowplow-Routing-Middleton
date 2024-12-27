@@ -1,6 +1,18 @@
-from routes_representations import RouteStep
+"""
+This module implements the genetic algorithm for solving the snowplow routing problem.
+
+Functions:
+    similarity(S1: Solution, S2: Solution, DEPOT: int) -> int:
+        Returns the similarity between two solutions. Defined as the length of the shorter route minus the number of edge sequences in common.
+        Higher number means the solutions are more different. 0 means identical.
+    remove_worst(population: list[Solution], beta: float) -> None:
+        Removes the worst solution from the population of solutions, in place. The worst solution is indicated by having the largest cost and smallest total distance score to all other solutions.
+    run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
+        Runs the genetic algorithm to find the best solution for snowplow routing.
+"""
+
 from shortest_paths import ShortestPaths
-from params import POP_SIZE, BETA, N_ITER, K
+from params import POP_SIZE, BETA, N_ITER
 import numpy as np
 import networkx as nx
 from local_search import local_improve
@@ -74,7 +86,7 @@ def remove_worst(population: list[Solution], beta: float) -> None:
     Args:
         population (list[Solution]): the population of current solutions
         beta (float): a decimal between 0 and 1, indicating how much to weigh cost vs similarity.
-        Should always be greater than 0.5 so that cost is the primary consideration.
+        This should always be greater than 0.5 so that cost is the primary consideration.
     """
     # sort costs by ascending order, so largest costs last
     costs = np.array([solution.cost for solution in population])
@@ -90,7 +102,7 @@ def remove_worst(population: list[Solution], beta: float) -> None:
 
     ranks = beta*ranks_cost + (1-beta)*ranks_distance
 
-    worst = population[np.argmax(ranks)]
+    # worst = population[np.argmax(ranks)]
     del population[np.argmax(ranks)]
 
 
@@ -101,7 +113,7 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
     Args:
         G (nx.MultiDiGraph): The graph representing the road network.
         sp (ShortestPaths): The object containing the shortest paths information.
-
+        DEPOT (int): The depot node of the graph
     Returns:
         Solution: the best solution found by the algorithm
     """
