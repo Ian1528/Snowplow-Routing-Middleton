@@ -1,5 +1,6 @@
 from math import atan2
 from math import pi
+import networkx as nx
 
 def angle_between_points(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
     '''
@@ -63,3 +64,28 @@ def turn_direction(angle: float) -> str:
         return "sharp right"
     else:
         return "u-turn"
+
+def turn_direction_count(G_DUAL: nx.MultiDiGraph, full_route: list[tuple[int, int, int]]) -> tuple[dict[str:int], list[str], list[int]]:
+    """
+    Calculate the count of different turn directions in a given route.
+    Parameters:
+    G_DUAL (nx.MultiDiGraph): A directed graph representing the road network.
+    full_route (list[tuple[int, int, int]]): A list of tuples representing the route, where each tuple represents an edge.
+    Returns:
+    tuple: A tuple containing:
+        - turns_hist (dict[str:int]): A dictionary with turn directions as keys and their counts as values.
+        - x_axis_bins (list[str]): A list of turn direction categories.
+        - y_axis (list[int]): A list of counts corresponding to each turn direction category.
+    """
+
+    turns_hist = dict()
+    for i in range(len(full_route) -1 ):
+        attrb = G_DUAL.get_edge_data(full_route[i], full_route[i+1])
+        if attrb is None:
+            continue
+        if "angle" in attrb[0].keys():
+            angle = attrb[0]["angle"]
+            turns_hist[turn_direction(angle)] = turns_hist.get(turn_direction(angle), 0) + 1
+    x_axis_bins = ["straight", "right", "sharp right", "left", "sharp left", "u-turn"]
+    y_axis = [turns_hist.get(turn, 0) for turn in x_axis_bins]
+    return turns_hist, x_axis_bins, y_axis

@@ -1,17 +1,26 @@
-from routestep import RouteStep
-
 class Solution:
     """
-    Represents a solution for the snowplow routing problem.
-    
+    A class to represent a solution for the snowplow routing problem.
     Attributes:
-        routes (list[list[RouteStep]]): The list of routes for the solution.
-        similarities (dict["Solution", int]): A dictionary of similarities between this solution and other solutions.
-        cost (int): The cost of the solution.
-        totalSimScore (int): The total similarity score of the solution.
+        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route is a list of tuples representing the edges of the multigraph.
+        similarities (dict["Solution", int]): A dictionary mapping other Solution instances to their similarity scores.
+        cost (int): The cost associated with this solution.
+        totalSimScore (int): The total similarity score of this solution compared to all other solutions.
+    Methods:
+        __str__(): Returns a string representation of the solution.
+        __repr__(): Returns a string representation of the solution.
+        add_similarity(S: "Solution", sim: int) -> None: Adds a similarity score between this solution and another solution.
+        remove_similarity(S: "Solution") -> None: Removes the similarity score between this solution and another solution.
     """
-    
-    def __init__(self, routes: list[list[RouteStep]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
+    def __init__(self, routes: list[list[tuple[int, int, int]]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
+        """
+        Initializes a Solution instance.
+        Args:
+            routes (list[list[tuple[int, int, int]]]): A list of routes, where each route is a list of tuples representing edges of the multigraph.
+            similarities (dict["Solution", int]): A dictionary mapping Solution instances to their similarity scores.
+            cost (int): The cost associated with the solution.
+            totalSimScore (int): The total similarity score for the solution.
+        """
         self.routes = routes
         self.cost = cost
         self.similarities = similarities

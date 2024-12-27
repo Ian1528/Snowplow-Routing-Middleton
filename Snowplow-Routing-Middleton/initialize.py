@@ -1,9 +1,23 @@
+"""
+This module provides functions to initialize and manipulate graphs for snowplow routing in Middleton.
+Functions:
+    create_small_toy() -> nx.MultiDiGraph:
+        Creates a small toy graph for snowplow routing in Middleton.
+    create_small_streets() -> nx.MultiDiGraph:
+        Creates a graph instance for the small streets network graph.
+    create_full_streets() -> nx.MultiDiGraph:
+        Creates a full streets network graph.
+"""
+
 import pandas as pd
 import osmnx as ox
 import numpy as np
 import geopandas as gpd
 import networkx as nx
 import pickle
+import os
+from params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
+
 
 def add_toy_street_info(G: nx.Graph) -> None:
     """
@@ -42,7 +56,7 @@ def add_toy_street_info(G: nx.Graph) -> None:
             attrb['salt_per'] = 0
             attrb['serviced'] = True
 
-def config_graph_attributes(G: nx.Graph) -> None:
+def add_node_weighted_degree(G: nx.Graph) -> None:
     """
     Configures the graph attributes by calculating the weighted degree for each node
     and adding a new attribute called "deadheading_passes" to each edge.
@@ -64,7 +78,7 @@ def config_graph_attributes(G: nx.Graph) -> None:
     nx.set_edge_attributes(G, 0, "deadheading_passes")
 
 
-def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv", nodeFile="Snowplow-Routing-Middleton/graph_data/nodes.csv") -> nx.MultiDiGraph:
+def create_small_toy() -> nx.MultiDiGraph:
     """
     Create a small toy graph for snowplow routing in Middleton.
 
@@ -73,11 +87,12 @@ def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv",
     Sets the weighted degree as a node attribute.
     Sets the deadheading_passes attribute of all edges to 0.
     Sets all edges to initially be unserviced
+
     Returns:
         G (networkx.MultiDiGraph): The constructed graph.
-
     """
-    
+    edgeFile = os.path.dirname(__file__) + "/graph_data/edges.csv"
+    nodeFile = os.path.dirname(__file__) + "/graph_data/nodes.csv"
     edgelist = pd.read_csv(edgeFile)
     nodelist = pd.read_csv(nodeFile)
 
@@ -102,7 +117,7 @@ def create_small_toy(edgeFile="Snowplow-Routing-Middleton/graph_data/edges.csv",
 
 def create_small_streets() -> nx.MultiDiGraph:
     """
-    Creates a small streets network graph.
+    Creates a graph instance for the small streets network graph.
 
     Returns:
         nx.MultiDiGraph: The small streets network graph.
@@ -122,13 +137,76 @@ def create_small_streets() -> nx.MultiDiGraph:
             G.remove_node(j) # remove all but the strongest connected component from G
 
     add_toy_street_info(G)
-    config_graph_attributes(G)
+    add_node_weighted_degree(G)
 
     # add geometry attribute to all edges
     nodes, edges = ox.graph_to_gdfs(G)
     G = ox.graph_from_gdfs(nodes, edges)
     return G
 
+def get_salt_from_length(length: float) -> float:
+    """
+    Returns the amount of salt (in lbs) required for a given road length in meters. 250 lbs/mile
+
+    Parameters:
+        length (float): The length of the road segment.
+
+    Returns:
+        float: The amount of salt required for the road segment.
+    """
+    length_mile = length * 0.000621371
+    return length_mile * 250
+
+def is_culdesac(G: nx.MultiDiGraph, node: int) -> bool:
+    """
+    Determines if a given node in a MultiDiGraph represents a cul-de-sac.
+    Parameters:
+        G (nx.MultiDiGraph): The MultiDiGraph representing the road network.
+        node (int): The node to check.
+    Returns:
+        bool: True if the node is a cul-de-sac, False otherwise.
+    """
+
+    if G.out_degree(node) == 0:
+        return True
+    
+    edge = list(G.edges(node, data=True))
+    attrb = edge[0][2]
+
+    # if 'roadtype' in attrb:
+    #     if attrb['roadtype'] == 'Ct' or attrb['roadtype'] == 'Cir':
+    #         if attrb['highway'] == 'residential':
+    #             return True
+
+    return G.out_degree(node) == 1 and G.in_degree(node) == 1 and attrb['highway'] == 'residential' and attrb['reversed'] == True and attrb['length'] < 500
+
+passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":2, "secondary":3, "primary":3, "motorway":6}
+small_roads = ["motorway_link", "tertiary_link", "secondary_link", "primary_link", "unclassified"]
+def calc_passes(oneway: bool, width: float, highway: str, roadtype: str) -> int:
+    """
+    Calculates the number of passes required for a given road segment.
+
+    Parameters:
+        oneway (bool): Whether the road segment is one-way.
+        width (float): The width of the road segment.
+        highway (str): The type of the road segment.
+
+    Returns:
+        int: The number of passes required for the road segment.
+    """
+    if highway in small_roads:
+        return 1
+    if np.isnan(width) and roadtype != "Blvd":
+        return passes_keys[highway]//2 if oneway else passes_keys[highway]
+    
+    if roadtype == "Blvd":
+        return 2 if oneway else 4
+
+    if width <= 36:
+        return 1 if oneway else 2
+    else:
+        return 1 if oneway else 3
+    
 def create_full_streets() -> nx.MultiDiGraph:
     """
     Creates a full streets network graph
@@ -137,10 +215,13 @@ def create_full_streets() -> nx.MultiDiGraph:
         nx.MultiDiGraph: The full scale streets network
     """
     # Read the shapefile
-    street_gdf = gpd.read_file("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\OSMWithData.gpkg")
+    osm_data_filepath = os.path.dirname(__file__) + "/graph_data/OSMWithData.gpkg"
 
+    street_gdf = gpd.read_file(osm_data_filepath)
+
+    osm_graph_filepath = os.path.dirname(__file__) + "/graph_data/streets_graph.pickle"
     # Read the OSM Graph
-    G = pickle.load(open("C:\\Users\\Sneez\\Desktop\\Snowplowing\\Snowplow-Routing-Middleton\\Snowplow-Routing-Middleton\\graph_data\\streets_graph.pickle", 'rb'))
+    G = pickle.load(open(osm_graph_filepath, 'rb'))
     G = nx.convert_node_labels_to_integers(G)
 
     nodes, edges = ox.graph_to_gdfs(G) # better than momepy b/c fills in missing geometry attributes
@@ -149,37 +230,57 @@ def create_full_streets() -> nx.MultiDiGraph:
     edges['width'] = np.array(street_gdf['With_EE_ft'])
     edges['roadtype'] = np.array(street_gdf['abvPostTyp'])
     edges['maintainer'] = np.array(street_gdf['Maintained'])
-
+    G = ox.graph_from_gdfs(nodes, edges)
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
-    passes_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
-    salt_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
     priorities = np.empty(len(edges))
     passes = np.empty(len(edges))
     salt = np.empty(len(edges))
     serviced = np.empty(len(edges), dtype=bool)
-
+    culdesac = np.empty(len(edges), dtype=bool)
+    plow_time = np.empty(len(edges))
     # go through each edge and update dictionary
-    for row in range(len(edges)):
-        highway_type = edges.iloc[row]['highway']
-        if street_gdf.iloc[row]['Jurisdicti'] == "City":
-            priorities[row] = priority_keys[highway_type]
-            passes[row] = passes_keys[highway_type]
-            salt[row] = salt_keys[highway_type]
-            serviced[row] = False
+    for index, edges_data in enumerate(edges.iterrows()):
+        edge = edges_data[0]
+        data = edges_data[1]
+
+        highway_type = data['highway']
+        length_meters = data['length']
+        width = data['width']
+        roadtype = data['roadtype']
+        oneway = data['oneway']
+
+        if street_gdf.iloc[index]['Jurisdicti'] == "City":
+            priorities[index] = priority_keys[highway_type]
+            passes[index] = calc_passes(oneway, width, highway_type, roadtype)
+            salt[index] = get_salt_from_length(length_meters)
+            serviced[index] = False
         else:
-            priorities[row] = 0
-            passes[row] = 0
-            salt[row] = 0
-            serviced[row] = True
-
-
+            priorities[index] = 0
+            passes[index] = 0
+            salt[index] = 0
+            serviced[index] = True
+        
+        if highway_type == "residential":
+            plow_time[index] = length_meters / PLOW_SPEED_RESIDENTIAL
+        else:
+            plow_time[index] = length_meters / PLOW_SPEED_HIGHWAY
+        culdesac[index] = is_culdesac(G, edge[1]) # edge[1] corresponds to the second node of the edge
     edges['priority'] = priorities
     edges['passes_rem'] = passes
     edges['salt_per'] = salt
     edges['serviced'] = serviced
-    
+    edges['culdesac'] = culdesac
+    edges['travel_time'] = plow_time
+
     G = ox.graph_from_gdfs(nodes, edges)
+    for edge in G.edges(data=True, keys=True):
+        if 'roadtype' in edge[3]:
+            if (edge[3]['roadtype'] == "Ct" or edge[3]['roadtype'] == "Cir") and edge[3]['highway'] == 'residential':
+                edge[3]['culdesac'] = True
+        elif "name" in edge[3]:
+            if edge[3]['name'] == "Bunker Hill Lane" or edge[3]['name'] == "Patrick Henry Way":
+                edge[3]['culdesac'] = True
     scc = list(nx.strongly_connected_components(G)) # strongly connected components
     scc.remove(max(scc, key=len))
 
@@ -187,10 +288,8 @@ def create_full_streets() -> nx.MultiDiGraph:
         for j in i:
             G.remove_node(j) # remove all but the strongest connected component from G
 
-    config_graph_attributes(G)
+    add_node_weighted_degree(G)
     return G
-  
-
 def add_multi_edges(G: nx.Graph) -> nx.MultiDiGraph:
     """
     Adds multiple edges to a graph based on the 'passes_rem' attribute of each edge.
