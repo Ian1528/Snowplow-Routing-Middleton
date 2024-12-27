@@ -1,24 +1,7 @@
 import networkx as nx
-import pandas as pd
 import shapely
 import osmnx as ox
 import geopandas as gpd
-
-import sys
-import os
-# getting the name of the directory
-# where the this file is present.
-current = os.path.dirname(os.path.realpath(__file__))
- 
-# Getting the parent directory name
-# where the current directory is present.
-parent = os.path.dirname(current)
- 
-# adding the parent directory to 
-# the sys.path.
-sys.path.append(parent)
- 
-# importing the module
 from initialize import create_full_streets, add_node_weighted_degree
 
 def config_sectioned_component(G: nx.MultiDiGraph) -> nx.MultiGraph:
@@ -102,7 +85,7 @@ def load_polygon(path: str) -> shapely.Polygon:
     return polygon.geometry[0]
 
 def load_multiple_polygons(path: str) -> tuple[shapely.Polygon, shapely.Polygon]:
-    polygon = gpd.read_file(path)
+    polygon: shapely.Polygon = gpd.read_file(path)
     required_part = polygon.geometry[polygon.is_required]
     not_required_part = polygon.geometry[~polygon.is_required]
     return required_part.iloc[0], not_required_part.iloc[0]
