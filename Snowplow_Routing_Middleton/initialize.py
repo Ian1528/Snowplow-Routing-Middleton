@@ -41,13 +41,16 @@ def add_toy_street_info(G: nx.Graph) -> None:
         highway_type = attrb['highway']
         attrb['priority'] = priority_keys[highway_type]
         if 'lanes' in attrb:
-            attrb['passes_rem'] = float(attrb['lanes']) // 2
-            attrb['salt_per'] = float(attrb['lanes']) // 2
+            if type(attrb['lanes']) == list:
+                attrb['passes_rem'] = float(attrb['lanes'][0]) // 2
+                attrb['salt_per'] = float(attrb['lanes'][0]) // 2
+            else:
+                attrb['passes_rem'] = float(attrb['lanes']) // 2
+                attrb['salt_per'] = float(attrb['lanes']) // 2
         else:
             attrb['passes_rem'] = passes_keys[highway_type]
             attrb['salt_per'] = salt_keys[highway_type]
         attrb['serviced'] = False
-    
     for edge in G.edges(data=True):
         attrb = edge[2]
         if np.random.random() < 0.1:
