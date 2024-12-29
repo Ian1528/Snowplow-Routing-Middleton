@@ -5,10 +5,10 @@ Functions:
     local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_edges: set[tuple[int, int, int]], DEPOT: int, threshold: float = 1) -> Solution:
     - Takes a current solution and runs the local improvement algorithm.
 """
-from shortest_paths import ShortestPaths
-from solution import Solution
-from params import K
-from costs import routes_cost, routes_cost_linked_list
+from .shortest_paths import ShortestPaths
+from .solution import Solution
+from .params import K
+from .costs import routes_cost, routes_cost_linked_list
 import random
 import networkx as nx
 class Node:

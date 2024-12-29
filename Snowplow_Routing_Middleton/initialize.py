@@ -16,7 +16,7 @@ import geopandas as gpd
 import networkx as nx
 import pickle
 import os
-from params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
+from .params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
 
 
 def add_toy_street_info(G: nx.Graph) -> None:

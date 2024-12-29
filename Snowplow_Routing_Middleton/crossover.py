@@ -8,10 +8,10 @@ import copy
 import math
 import numpy as np
 import networkx as nx
-from costs import routes_cost
-from shortest_paths import ShortestPaths
-from routes_representations import RouteStep
-from params import KAPPA
+from .costs import routes_cost
+from .shortest_paths import ShortestPaths
+from .routes_representations import RouteStep
+from .params import KAPPA
 
 def combine(routes1: list[list[tuple[int, int, int]]], routes2: list[list[tuple[int, int, int]]]) -> tuple[list[list[tuple[int, int, int]]], int]:
     """

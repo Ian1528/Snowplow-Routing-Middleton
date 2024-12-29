@@ -15,9 +15,9 @@ Functions:
 """
 
 import networkx as nx
-from turns import angle_between_vectors, turn_direction
-from shortest_paths import ShortestPaths
-from params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR, SALT_CAP
+from .turns import angle_between_vectors, turn_direction
+from .shortest_paths import ShortestPaths
+from .params import COST_WEIGHTS, TURN_WEIGHT, PRIORITY_SCALE_FACTOR, SALT_CAP
 
 def route_travel_time(G: nx.MultiDiGraph, route: list[tuple[int, int, int]], DEPOT: int) -> float:
     """

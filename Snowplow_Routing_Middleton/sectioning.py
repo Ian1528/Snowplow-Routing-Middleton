@@ -2,7 +2,7 @@ import networkx as nx
 import shapely
 import osmnx as ox
 import geopandas as gpd
-from initialize import create_full_streets, add_node_weighted_degree
+from .initialize import create_full_streets, add_node_weighted_degree
 
 def config_sectioned_component(G: nx.MultiDiGraph) -> nx.MultiGraph:
     """

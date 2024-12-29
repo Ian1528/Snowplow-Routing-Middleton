@@ -7,14 +7,14 @@ Functions:
 """
 import networkx as nx
 import math
-from shortest_paths import ShortestPaths
+from .shortest_paths import ShortestPaths
 import random
 import numpy as np
-from routes_representations import RouteStep
-from costs import single_edge_cost
+from .routes_representations import RouteStep
+from .costs import single_edge_cost
 from collections import deque
-from turns import angle_between_vectors, turn_direction
-from params import SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
+from .turns import angle_between_vectors, turn_direction
+from .params import SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
 
 edges_serviced = 0
 def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:

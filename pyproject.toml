@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "snowplow-routing-middleton"
+name = "snowplow_routing_middleton"
 version = "0.1.0"
 description = "Environment for the snowplow routing project"
 authors = ["Ian1528 <102779366+Ian1528@users.noreply.github.com>"]

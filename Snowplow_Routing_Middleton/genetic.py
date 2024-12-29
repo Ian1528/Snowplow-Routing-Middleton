@@ -11,16 +11,16 @@ Functions:
         Runs the genetic algorithm to find the best solution for snowplow routing.
 """
 
-from shortest_paths import ShortestPaths
-from params import POP_SIZE, BETA, N_ITER
+from .shortest_paths import ShortestPaths
+from .params import POP_SIZE, BETA, N_ITER
 import numpy as np
 import networkx as nx
-from local_search import local_improve
-from crossover import apply_crossover
-from construction import route_generation
-from costs import routes_cost
+from .local_search import local_improve
+from .crossover import apply_crossover
+from .construction import route_generation
+from .costs import routes_cost
 import random
-from solution import Solution
+from .solution import Solution
 
 def similarity(S1: Solution, S2: Solution, DEPOT: int) -> int:
     """

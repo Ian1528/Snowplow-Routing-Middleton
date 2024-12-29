@@ -7,10 +7,10 @@ Functions:
 - create_dual_toy(G: nx.MultiDiGraph, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
     Uses x,y coords embedded in toy primal graph instead of lat, long of streets data.
 """
-from turns import angle_between_points, angle_between_vectors
-from costs import cost_of_dual_node
+from .turns import angle_between_points, angle_between_vectors
+from .costs import cost_of_dual_node
 import networkx as nx
-import params
+from . import params
 def create_dual_streets(G: nx.MultiDiGraph, DEPOT: int, depotSource: bool=True, sourceNodes: bool=False) -> nx.MultiDiGraph:
     """
     Creates a dual graph based on the given input graph from real streets data. 

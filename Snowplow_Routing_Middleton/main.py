@@ -1,15 +1,16 @@
-import initialize
-import dual_graphs
-import construction
-import plotting
-import sectioning
-import params
-from shortest_paths import ShortestPaths
-from solution import Solution
-from genetic import run_genetic
-from routes_representations import create_full_routes_with_returns
+from . import dual_graphs
+from . import initialize
+from . import construction
+from . import plotting
+from . import sectioning
+from . import params
+from . import costs
+from .shortest_paths import ShortestPaths
+from .solution import Solution
+from .genetic import run_genetic
+from .routes_representations import create_full_routes_with_returns
 import folium
-import costs
+
 
 
 def create_instance(graph_instances:tuple[str, str]=("smalltoy", "genetic"), take_input=False) -> None:

@@ -1,5 +1,5 @@
-from shortest_paths import ShortestPaths
-from params import SALT_CAP
+from .shortest_paths import ShortestPaths
+from .params import SALT_CAP
 import networkx as nx
 class RouteStep:
     """

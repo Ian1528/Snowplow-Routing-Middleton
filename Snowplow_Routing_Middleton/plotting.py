@@ -14,7 +14,7 @@ Functions:
 import itertools as it
 import matplotlib.pyplot as plt
 import networkx as nx
-from params import find_depot
+from .params import find_depot
 import folium
 import folium.plugins
 import datetime
