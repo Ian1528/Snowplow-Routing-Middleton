@@ -158,7 +158,7 @@ def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]
             count += 1
     return m
 
-def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]], m: folium.Map | None, label_color: str, path_color: str) -> folium.Map:
+def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]], m: folium.Map | None, label_color: str, path_color: str, dif=1e-4) -> folium.Map:
     """
     Plots moving routes on an animated Folium map.
 
@@ -168,6 +168,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         m (folium.Map | None): An existing Folium map to plot on, or None to create a new map.
         label_color (str): The color of the labels for the markers.
         path_color (str): The color of the path lines.
+        dif (float, optional): The difference in latitude or longitude at which to add intermediate points to smooth the animation. Defaults to 1e-4.
     Returns:
         folium.Map: The Folium map with the plotted routes.
     """
@@ -176,38 +177,37 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
     count = 0
     current_time = datetime.datetime.now()
     features = list()
-    point_features = list()
-    for i, edge in enumerate(full_route):
+    for edge in full_route:
         edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
-        current_time = current_time + datetime.timedelta(minutes=1)#.split('.')[0]
         if edge_data is not None:
-            plot_marker = True
             name = edge_data.get("name", "Unnamed")   
-            if i < len(full_route)-1:
-                edge_data_next = G.get_edge_data(full_route[i+1][0], full_route[i+1][1], full_route[i+1][2])
-                if edge_data_next is not None and "name" in edge_data_next and "name" in edge_data:
-                    if edge_data_next["name"] == edge_data["name"]:
-                        plot_marker = False
             lstring = edge_data['geometry']
-            # swap long lat to lat long
-            # lstring_lat_long = lstring.__class__([(y, x) for x, y in lstring.coords])
             lat_long_coords = [(y, x) for x, y in lstring.coords]
-            midpoint = len(list(lstring.coords))//2
-            icon_number = folium.plugins.BeautifyIcon(
-                border_color=label_color,
-                border_width=1,
-                text_color=label_color,
-                number=count,
-                inner_icon_style="margin-top:2;",
-            )
+            lstring_lengthed_coords = list()
+            for i in range(len(lat_long_coords)):
+                lat,long=lat_long_coords[i]
+                if i < len(lat_long_coords) - 1:
+                    next_lat, next_long = lat_long_coords[i + 1]
+                    dif_lat, dif_long = next_lat - lat, next_long - long
+
+                    if dif_lat > dif or dif_long > dif:
+                        num_intervals = int(max(abs(dif_lat), abs(dif_long)) // dif)
+                        new_lat_coords = np.linspace(lat, next_lat, num_intervals)
+                        new_long_coords = np.linspace(long, next_long, num_intervals)
+
+                        lstring_lengthed_coords.extend([(new_long_coords[i], new_lat_coords[i]) for i in range(num_intervals)])
+                    else:
+                        lstring_lengthed_coords.append((long, lat))
+                else:
+                    lstring_lengthed_coords.append((long, lat))
             feature = {
                 "type": "Feature",
                 "geometry": {
                     "type": "LineString",
-                    "coordinates": list(lstring.coords)
+                    "coordinates": lstring_lengthed_coords
                 },
                 "properties": {
-                    "times": [str(current_time) for i in range(len(list(lstring.coords)))],
+                    "times": [str(current_time + datetime.timedelta(minutes=i)) for i in range(len(lstring_lengthed_coords))],
                     "name": name,
                     "edge": edge,
                     "order": count,
@@ -217,48 +217,25 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
                     },
                 }
             }
-            point_feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": list(lstring.coords)[-1]
-                },
-                "properties": {
-                    "times": [str(current_time)],
-                    "popup": f"Edge {count}: {name}",
-                    "icon": "circle",
-                    "iconstyle":{
-                        "fillColor": "red",
-                        "fillOpacity": .5,
-                        "radius": 2,
-                    },
-                    "style": {"weight": 0},
-                }
-            }
             features.append(feature)
-            point_features.append(point_feature)
             folium.PolyLine(locations=lat_long_coords, color="black", weight=1, tooltip=edge_data).add_to(m)
-            # if plot_marker:
-            #     folium.Marker(location=lstring.coords[midpoint], popup=f"Edge {count}: {name}", icon=icon_number).add_to(m)
-            # count += 1
+            current_time += datetime.timedelta(minutes=len(lstring_lengthed_coords))
+            
     folium.plugins.TimestampedGeoJson(
         {
             "type": "FeatureCollection",
             "features": features,
         },
-        period="PT1M",
+        period="PT5M",
         add_last_point=False,
-        # duration="PT5M",
     ).add_to(m)
     folium.plugins.TimestampedGeoJson(
         {
             "type": "FeatureCollection",
-            "features": point_features,
+            "features": features,
         },
-        period="PT1M",
-        add_last_point=False,
-        duration="PT1M",
+        period="PT5M",
+        add_last_point=True,
+        duration="PT1M"
     ).add_to(m)
-
-
     return m
