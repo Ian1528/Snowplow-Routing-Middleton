@@ -14,10 +14,12 @@ Functions:
 import itertools as it
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 from .params import find_depot
 import folium
 import folium.plugins
 import datetime
+import shapely
 
 def get_node_pos(G: nx.MultiDiGraph) -> dict:
     """
@@ -158,6 +160,73 @@ def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]
             count += 1
     return m
 
+
+def find_pairs_of_edges(G: nx.MultiDiGraph) -> tuple[dict[tuple[tuple[int, int, int], tuple[int,int,int]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]:
+    """
+    Find pairs of edges in a graph that represent the same road segment in opposite directions, and find 
+    pairs of edges that represent the same road segment in the same direction.
+
+    Args:
+        G (nx.MultiDiGraph): The graph representing the road network.
+    Returns:
+        tuple[dict[tuple[tuple[int, int, int], tuple[int,int,int]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]
+        A tuple of two dictionaries mapping edges in a pair or an antipair to each other. 
+        The first dictionary contains pairs of edges that represent the same road segment in the same direction, 
+        and the second dictionary contains pairs of edges that represent the same road segment in opposite directions
+    """
+    lstrings = dict() # dictionary mapping linestrings to edges
+    pairs_dict = dict() # dict mapping edge to its pair. Each edge is marked both as a key and a value
+    antipairs_dict = dict()
+    for edge in G.edges(data=True, keys=True):
+        edge_tup = (edge[0], edge[1], edge[2])
+        if edge[3]['geometry'] is not None:
+            lstring = tuple(edge[3]['geometry'].coords)
+            # matching pair
+            if lstring in lstrings.keys():
+                pairs_dict.update({edge_tup: lstrings[lstring]})
+                pairs_dict.update({lstrings[lstring]: edge_tup})
+                # lstrings.pop(lstring)
+
+            # matching antipair (same road, opposite direction)
+            if lstring[::-1] in lstrings.keys():
+                antipairs_dict.update({edge_tup: lstrings[lstring[::-1]]})
+                antipairs_dict.update({lstrings[lstring[::-1]]: edge_tup})
+            
+            lstrings.update({lstring: edge_tup})
+
+    return pairs_dict, antipairs_dict
+def lengthen_lstring_coords(lstring: shapely.LineString, diff: float) -> list[tuple[float, float]]:
+    """
+    Get the coordinates of a LineString with additional points added to make the lines smoother.
+
+    Helper function for plot_moving_routes_folium.
+
+    Args:
+        lstring (shapely.LineString): The LineString to get coordinates from.
+        diff (float): The maximum difference between two points in the LineString.
+    Returns:
+        list[tuple[float, float]]: A list of coordinates for the LineString.
+    """
+    lat_long_coords = [(y, x) for x, y in lstring.coords]
+    lstring_lengthed_coords = list()
+    for i in range(len(lat_long_coords)):
+        lat,long=lat_long_coords[i]
+        if i < len(lat_long_coords) - 1:
+            next_lat, next_long = lat_long_coords[i + 1]
+            dif_lat, dif_long = next_lat - lat, next_long - long
+
+            if dif_lat > diff or dif_long > diff:
+                num_intervals = int(max(abs(dif_lat), abs(dif_long)) // diff)
+                new_lat_coords = np.linspace(lat, next_lat, num_intervals)
+                new_long_coords = np.linspace(long, next_long, num_intervals)
+
+                lstring_lengthed_coords.extend([(new_long_coords[i], new_lat_coords[i]) for i in range(num_intervals)])
+            else:
+                lstring_lengthed_coords.append((long, lat))
+        else:
+            lstring_lengthed_coords.append((long, lat))
+    return lstring_lengthed_coords, lat_long_coords
+
 def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]], m: folium.Map | None, label_color: str, path_color: str, dif=1e-4) -> folium.Map:
     """
     Plots moving routes on an animated Folium map.
@@ -168,59 +237,69 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         m (folium.Map | None): An existing Folium map to plot on, or None to create a new map.
         label_color (str): The color of the labels for the markers.
         path_color (str): The color of the path lines.
-        dif (float, optional): The difference in latitude or longitude at which to add intermediate points to smooth the animation. Defaults to 1e-4.
     Returns:
         folium.Map: The Folium map with the plotted routes.
     """
+    G_copy = G.copy()
     if m is None:
         m = folium.Map(location=[43.1, -89.5], zoom_start=12)
     count = 0
     current_time = datetime.datetime.now()
     features = list()
+
+    pairs_dict, antipairs_dict = find_pairs_of_edges(G)
+    partially_mapped_pairs, partially_mapped_antipairs = set(), set()
+
+    serviced_edges = set()
     for edge in full_route:
-        edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
-        if edge_data is not None:
-            name = edge_data.get("name", "Unnamed")   
-            lstring = edge_data['geometry']
-            lat_long_coords = [(y, x) for x, y in lstring.coords]
-            lstring_lengthed_coords = list()
-            for i in range(len(lat_long_coords)):
-                lat,long=lat_long_coords[i]
-                if i < len(lat_long_coords) - 1:
-                    next_lat, next_long = lat_long_coords[i + 1]
-                    dif_lat, dif_long = next_lat - lat, next_long - long
+        edge_data = G_copy.get_edge_data(edge[0], edge[1], edge[2])   
+        if edge_data is None:
+            continue
+        
+        graph_attributes = {"color": path_color, "dashed": False, "weight": 5}
+        # if the edge is a part of a pair
+        if edge in pairs_dict.keys():
+            # if the first part of the edge hasn't been serviced, make the line thinner
+            if edge not in partially_mapped_pairs and pairs_dict[edge] not in partially_mapped_pairs:
+                graph_attributes['weight'] = 1
+                partially_mapped_pairs.add(edge)
+        if edge in antipairs_dict.keys():
+            # if the first part of the edge hasn't been serviced, make the line dashed
+            if edge not in partially_mapped_antipairs and antipairs_dict[edge] not in partially_mapped_antipairs:
+                graph_attributes['dashed'] = True
+                partially_mapped_antipairs.add(edge)
 
-                    if dif_lat > dif or dif_long > dif:
-                        num_intervals = int(max(abs(dif_lat), abs(dif_long)) // dif)
-                        new_lat_coords = np.linspace(lat, next_lat, num_intervals)
-                        new_long_coords = np.linspace(long, next_long, num_intervals)
-
-                        lstring_lengthed_coords.extend([(new_long_coords[i], new_lat_coords[i]) for i in range(num_intervals)])
-                    else:
-                        lstring_lengthed_coords.append((long, lat))
-                else:
-                    lstring_lengthed_coords.append((long, lat))
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": lstring_lengthed_coords
-                },
-                "properties": {
-                    "times": [str(current_time + datetime.timedelta(minutes=i)) for i in range(len(lstring_lengthed_coords))],
-                    "name": name,
-                    "edge": edge,
-                    "order": count,
-                    "style": {
-                        "color": path_color,
-                        "weight": 3.5
-                    },
-                }
-            }
-            features.append(feature)
-            folium.PolyLine(locations=lat_long_coords, color="black", weight=1, tooltip=edge_data).add_to(m)
-            current_time += datetime.timedelta(minutes=len(lstring_lengthed_coords))
             
+        deadhead = False if edge not in serviced_edges else True
+        serviced_edges.add(edge)
+
+        name = edge_data.get("name", "Unnamed")
+        if deadhead:
+            graph_attributes['color'] = "red"
+
+        lstring = edge_data['geometry']
+        coords, lat_long_coords = lengthen_lstring_coords(lstring, dif)
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": {
+                "times": [str(current_time + datetime.timedelta(minutes=i)) for i in range(len(coords))],
+                "name": name,
+                "edge": edge,
+                "order": count,
+                "style": {
+                    "color": graph_attributes["color"],
+                    "weight": graph_attributes['weight'],
+                    "dashArray": "5, 10" if graph_attributes['dashed'] else None
+                },
+            }
+        }
+        features.append(feature)
+        folium.PolyLine(locations=lat_long_coords, color="black", weight=.5, tooltip=edge_data).add_to(m)
+        current_time += datetime.timedelta(minutes=len(coords))
     folium.plugins.TimestampedGeoJson(
         {
             "type": "FeatureCollection",
