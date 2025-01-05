@@ -269,7 +269,7 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     if (random.random() < random_threshold):
         return random.choice(rcl)
     
-    turn_weights = {"straight": 6, "right": 5, "left": 4, "sharp right": 3, "sharp left": 2, "u-turn": 1}
+    turn_weights = {"straight": 100, "right": 10, "left": 5, "sharp right": 5, "sharp left": 2, "u-turn": 1}
     weights_turns = np.empty(len(rcl))
     weights_degrees = np.empty(len(rcl))
     weights_priority = np.empty(len(rcl))
@@ -322,7 +322,7 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
 
     # normalize the weights again
     weights_tot = weights_tot / np.sum(weights_tot)
-    
+
     # choose an arc based on the weights (higher weights are more likely to be chosen)
     index = int(np.random.choice(np.linspace(0,len(rcl)-1,len(rcl)), p=weights_tot))
 

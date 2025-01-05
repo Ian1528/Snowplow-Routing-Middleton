@@ -261,7 +261,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         if edge in pairs_dict.keys():
             # if the first part of the edge hasn't been serviced, make the line thinner
             if edge not in partially_mapped_pairs and pairs_dict[edge] not in partially_mapped_pairs:
-                graph_attributes['weight'] = 1
+                graph_attributes['weight'] = 2.5
                 partially_mapped_pairs.add(edge)
         if edge in antipairs_dict.keys():
             # if the first part of the edge hasn't been serviced, make the line dashed

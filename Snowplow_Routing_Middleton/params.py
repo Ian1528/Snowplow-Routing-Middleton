@@ -30,6 +30,11 @@ DEPOT = 0
 SALT_CAP = 20000
 PLOW_SPEED_RESIDENTIAL = 4.91744 # m/s
 PLOW_SPEED_HIGHWAY = 8.9408 # m/s
+HIGH_PRIORITY_ROADS = ["Parmenter Street", "Airport Road", "Pleasant View Road", "Deming Way", "University Avenue", "Pheasant Branch Road", "Park Street", "North Gammon Road", "North High Point Road", "High Road"]
+# notes on high priority roads:
+#  - century avenue west of -89.509817
+#  - park st south of 43.097088
+
 
 # route construction
 ALPHA = 1
