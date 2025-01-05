@@ -38,8 +38,8 @@ HIGH_PRIORITY_ROADS = ["Parmenter Street", "Airport Road", "Pleasant View Road",
 
 # route construction
 ALPHA = 1
-SELECTION_WEIGHTS = [0.4, 0.2, 0.4]
-RAND_THRESH = 0.2
+SELECTION_WEIGHTS = [0.4, 0.2, 0.4] # [turn direction, weighted degree, priority]
+RAND_THRESH = 0.0
 
 # cost function
 COST_WEIGHTS = [.8, .1, .1]

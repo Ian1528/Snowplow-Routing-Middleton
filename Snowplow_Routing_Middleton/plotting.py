@@ -298,7 +298,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
             }
         }
         features.append(feature)
-        folium.PolyLine(locations=lat_long_coords, color="black", weight=.5, tooltip=edge_data).add_to(m)
+        folium.PolyLine(locations=lat_long_coords, color="black", weight=.5, tooltip=edge).add_to(m)
         current_time += datetime.timedelta(minutes=len(coords))
     folium.plugins.TimestampedGeoJson(
         {

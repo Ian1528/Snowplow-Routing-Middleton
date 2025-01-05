@@ -50,13 +50,13 @@ def add_toy_street_info(G: nx.Graph) -> None:
             attrb['passes_rem'] = passes_keys[highway_type]
             attrb['salt_per'] = salt_keys[highway_type]
         attrb['serviced'] = False
-    for edge in G.edges(data=True):
-        attrb = edge[2]
-        if np.random.random() < 0.1:
-            attrb['passes_rem'] = 0
-            attrb['priority'] = 0
-            attrb['salt_per'] = 0
-            attrb['serviced'] = True
+    # for edge in G.edges(data=True):
+    #     attrb = edge[2]
+    #     if np.random.random() < 0.1:
+    #         attrb['passes_rem'] = 0
+    #         attrb['priority'] = 0
+    #         attrb['salt_per'] = 0
+    #         attrb['serviced'] = True
 
 def add_node_weighted_degree(G: nx.Graph) -> None:
     """
