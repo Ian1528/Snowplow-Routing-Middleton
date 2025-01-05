@@ -264,7 +264,7 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     """
     assert sum(weights) == 1
 
-    # randomize 20% of the time
+    # randomize 5% of the time
     if (random.random() < random_threshold):
         return random.choice(rcl)
     
@@ -304,10 +304,10 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
         weights_degrees = weights_degrees / np.sum(weights_degrees)
     if np.sum(weights_priority) != 0:
         weights_priority = weights_priority / np.sum(weights_priority)
-
+    if np.sum(weights_turns) != 0:
+        weights_turns = weights_turns / np.sum(weights_turns)
     # check that we can calculate turn cost
     if prev_node is not None:
-        weights_turns = weights_turns / np.sum(weights_turns)
         weights_tot = weights[0]*weights_turns + weights[1]*weights_degrees + weights[2]*weights_priority
     
     # if there is no previous node, we are at depot, so turn direction doesn't matter.
@@ -327,36 +327,36 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     index = np.argmax(weights_tot)
     # index = int(np.random.choice(np.linspace(0,len(rcl)-1,len(rcl)), p=weights_tot))
 
-    chosen_edge = rcl[index]
-    curr_node = chosen_edge[0]
-    next_node = chosen_edge[1]
-    k = chosen_edge[2]
-    # only calculate turn direction if there is a previous node
-    if prev_node is not None:
-        v_x = G.nodes[curr_node]['x']-G.nodes[prev_node]['x']
-        v_y = G.nodes[curr_node]['y']-G.nodes[prev_node]['y']
+    # chosen_edge = rcl[index]
+    # curr_node = chosen_edge[0]
+    # next_node = chosen_edge[1]
+    # k = chosen_edge[2]
+    # # only calculate turn direction if there is a previous node
+    # if prev_node is not None:
+    #     v_x = G.nodes[curr_node]['x']-G.nodes[prev_node]['x']
+    #     v_y = G.nodes[curr_node]['y']-G.nodes[prev_node]['y']
 
-        w_x = G.nodes[next_node]['x']-G.nodes[curr_node]['x']
-        w_y = G.nodes[next_node]['y']-G.nodes[curr_node]['y']
+    #     w_x = G.nodes[next_node]['x']-G.nodes[curr_node]['x']
+    #     w_y = G.nodes[next_node]['y']-G.nodes[curr_node]['y']
 
-        v = (v_x, v_y)
-        w = (w_x, w_y)
+    #     v = (v_x, v_y)
+    #     w = (w_x, w_y)
 
-        theta = angle_between_vectors(v,w)
-        dir = turn_direction(theta)
-        if dir == "u-turn":
-            print(f"u turning, index {index} with weights:")
-            print("turn_weights:", weights_turns)
-            print("degree weights", weights_degrees)
-            print("Priroit weights", weights_priority)
-            print("-----")
-            print("Weighted version of the followinwg weights")
-            print("Turn_weights", weights[0]*weights_turns)
-            print("degree", weights[1]*weights_degrees)
-            print("priority", weights[2]*weights_priority)
-            print("total weights:", weights_tot)
-            print("Lenght of RCL: ", len(rcl))
-            print("*********8")
+    #     theta = angle_between_vectors(v,w)
+    #     dir = turn_direction(theta)
+    #     if dir == "u-turn":
+    #         print(f"u turning, index {index} with weights:")
+    #         print("turn_weights:", weights_turns)
+    #         print("degree weights", weights_degrees)
+    #         print("Priroit weights", weights_priority)
+    #         print("-----")
+    #         print("Weighted version of the followinwg weights")
+    #         print("Turn_weights", weights[0]*weights_turns)
+    #         print("degree", weights[1]*weights_degrees)
+    #         print("priority", weights[2]*weights_priority)
+    #         print("total weights:", weights_tot)
+    #         print("Lenght of RCL: ", len(rcl))
+    #         print("*********8")
     return rcl[index]
 
 def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[tuple[int, int, int]], DEPOT: int, curr_salt: float, sp_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]]) -> tuple[list[RouteStep], list[RouteStep]]:

@@ -38,6 +38,8 @@ def add_toy_street_info(G: nx.Graph) -> None:
     for edge in G.edges(data=True, keys=True):
         attrb = edge[3]
         highway_type = attrb['highway']
+        length_meters = attrb['length']
+
         attrb['priority'] = priority_keys[highway_type]
         if 'lanes' in attrb:
             if type(attrb['lanes']) == list:
@@ -49,6 +51,12 @@ def add_toy_street_info(G: nx.Graph) -> None:
         else:
             attrb['passes_rem'] = passes_keys[highway_type]
             attrb['salt_per'] = salt_keys[highway_type]
+        
+        if highway_type == "residential":
+            attrb["travel_time"] = length_meters / PLOW_SPEED_RESIDENTIAL
+        else:
+            attrb["travel_time"] = length_meters / PLOW_SPEED_HIGHWAY
+
         attrb['serviced'] = False
     # for edge in G.edges(data=True):
     #     attrb = edge[2]

@@ -39,11 +39,11 @@ HIGH_PRIORITY_ROADS = ["Parmenter Street", "Airport Road", "Pleasant View Road",
 # route construction
 ALPHA = 1
 SELECTION_WEIGHTS = [0.4, 0.2, 0.4] # [turn direction, weighted degree, priority]
-RAND_THRESH = 0.0
+RAND_THRESH = 0.05 # consider making this a function of the number of edges in the graph, or zero for optimality (but then we lose all variation in local searches)
 
 # cost function
-COST_WEIGHTS = [.8, .1, .1]
-TURN_WEIGHT = 0.01
+COST_WEIGHTS = [.8, .1, .1] # [time, deadheading, priority]
+TURN_WEIGHT = 1 # scale the duration of a turn by this factor
 PRIORITY_SCALE_FACTOR = .0005
 # local search
 K = 3
@@ -55,8 +55,6 @@ KAPPA = 3 # number of nearest neighbors to consider when inserting edge
 POP_SIZE = 10
 N_ITER = 25
 BETA = .7
-
-# parameters = [DEPOT, SALT_CAP, ALPHA, SELECTION_WEIGHTS]
 
 def find_depot(G: nx.MultiDiGraph) -> tuple[int, dict]:
     """

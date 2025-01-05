@@ -93,8 +93,9 @@ def cost_of_dual_node(first_edge: tuple[int, int, int, dict], angle: float) -> f
         The nodes passed as parameters are edges in the original primal graph.
     """
     weight = first_edge[3]['travel_time']
-    # add the turn penalty cost
-    turn_penalty = {"straight": 0, "right": 1, "left": 2, "sharp right": 2, "sharp left": 3, "u-turn": 4}
+
+    # add the turn penalty cost, estimated extra time to make the turn
+    turn_penalty = {"straight": 0, "right": 5, "left": 10, "sharp right": 10, "sharp left": 15, "u-turn": 120}
     
     weight += TURN_WEIGHT * turn_penalty[turn_direction(angle)]
     return weight
