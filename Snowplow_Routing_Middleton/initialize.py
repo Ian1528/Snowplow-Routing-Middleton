@@ -275,6 +275,10 @@ def create_full_streets() -> nx.MultiDiGraph:
     G = ox.graph_from_gdfs(nodes, edges)
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
+    # set high priority roads before adding other attributes (so that jurisdiction can override this)
+    set_high_priority_roads(G)
+
+
     priorities = np.empty(len(edges))
     passes = np.empty(len(edges))
     salt = np.empty(len(edges))
@@ -329,7 +333,6 @@ def create_full_streets() -> nx.MultiDiGraph:
     for i in scc:
         for j in i:
             G.remove_node(j) # remove all but the strongest connected component from G
-    set_high_priority_roads(G)
     add_node_weighted_degree(G)
 
     return G

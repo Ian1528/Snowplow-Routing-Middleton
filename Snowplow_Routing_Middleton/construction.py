@@ -400,7 +400,6 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
     curr_node = DEPOT
     edges_serviced = 0
     total_required = calc_total_required_edges(G_copy)
-
     routes = []
     routes_only_required = []
 
