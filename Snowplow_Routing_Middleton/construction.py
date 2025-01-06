@@ -10,14 +10,13 @@ import math
 from .shortest_paths import ShortestPaths
 import random
 import numpy as np
-from .routes_representations import RouteStep
 from .costs import single_edge_cost
 from collections import deque
 from .turns import angle_between_vectors, turn_direction
 from .params import SALT_CAP, ALPHA, SELECTION_WEIGHTS, RAND_THRESH
 
 edges_serviced = 0
-def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], options: bool, curr_salt : float, route_required : list[tuple[int, int, int]], all_prev_routes_required: list[list[RouteStep]], undirected=False) -> tuple[int, int]:
+def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[tuple[int, int, int]], curr_salt : float, route_required : list[tuple[int, int, int]], undirected=False) -> tuple[int, int]:
     
     """
     Visits an arc and updates the current route and graph information. 
@@ -26,11 +25,9 @@ def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], op
     Parameters:
         G (networkx.Graph): The graph representing the network
         arc (tuple[int, int, int]): The arc to be visited
-        route (list[RouteStep]): The partial route taken so far, represented as a list of RouteStep objects
-        options (bool): Flag indicating whether there were other directions for the route to take.
+        route (list[tuple[int, int, int]]): The partial route taken so far, represented as a list of edges
         curr_salt (int): The current value of salt at this point of the route
         route_required (list[tuple[int, int, int]]): List of all required edges in the route so far
-        all_prev_routes_required (list): List of all previous routes so far with only required edges
         undirected (bool): Flag indicating if the graph is undirected (default: False)
     Returns:
         int: The new node that the arc is on
@@ -42,11 +39,7 @@ def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], op
     to_node = arc[1]
     id = arc[2]
     # initialize routstep object
-    
-    prev_edge = route_required[-1] if len(route_required) > 0 else (all_prev_routes_required[-1][-1] if len(all_prev_routes_required) > 0 else None)
-    prev_routestep = RouteStep(prev_edge[0], prev_edge[1], prev_edge[2]) if prev_edge != None else None
-    new_routestep = RouteStep(from_node, to_node, id, options=options, saltval=curr_salt)
-
+    new_edge = (from_node, to_node, id)
     # need a check to see if we can actually service the arc given the amount of salt we have left.
     salt_required = G[from_node][to_node][id]['salt_per']
     serviced = G[from_node][to_node][id]['serviced']
@@ -63,17 +56,9 @@ def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], op
         G[from_node][to_node][id]['serviced'] = True
         
         edges_serviced += 1
-        new_routestep.deadheaded = False
-        route_required.append((from_node, to_node, id))
+        route_required.append(new_edge)
 
-        # update links
-        new_routestep.prev = prev_routestep
-        if prev_routestep != None:
-            prev_routestep.next = new_routestep
-    else:
-        G[from_node][to_node][id]['deadheading_passes'] += 1
-        new_routestep.deadheaded = True
-    
+    route.append(new_edge)
     # if len(route) != 0:
     #     if route[-1].node1 == new_routestep.node1 and route[-1].node2 == new_routestep.node2 and route[-1].edge_id == new_routestep.edge_id:
     #         print("Retraversing same edge immediately")
@@ -82,7 +67,6 @@ def visit_arc(G: nx.Graph, arc: tuple[int, int, int], route: list[RouteStep], op
     #             print(step)
     #         print("New arc to visit:", arc)
 
-    route.append(new_routestep)
     return to_node, curr_salt
 
 
@@ -115,15 +99,15 @@ def get_required_edges_from_node(G: nx.Graph, prev: int, curr: int) -> tuple[lis
 
 
 
-def return_to_depot(G: nx.Graph, DEPOT: int, route_up_to_now: list[RouteStep], route_required: list[tuple[int, int, int]], salt: int, shortest_paths_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]], options=False) -> int:
+def return_to_depot(G: nx.Graph, DEPOT: int, route_up_to_now: list[tuple[int, int, int]], route_required: list[tuple[int, int, int]], salt: int, shortest_paths_model: ShortestPaths) -> int:
     """
     Returns to the depot via the shortest path, updating any required arcs along the way. 
 
     Args:
         G (nx.Graph): The graph representing the current network
         DEPOT: The depot of this graph/network
-        route_up_to_now (list[RouteStep]): A list of the full current route with deadheading included
-        route_required (list[RouteStep]): A list of the full current route without deadheading
+        route_up_to_now (list[tuple[int, int, int]]): A list of the full current route with deadheading included
+        route_required (list[tuple[int, int, int]]): A list of the full current route without deadheading
         salt (int): Current value of salt
         shortest_paths_model (ShortestPaths): The shortest paths model to use for finding the shortest path
         all_prev_routes_required (list): List of all previous routes so far
@@ -135,13 +119,12 @@ def return_to_depot(G: nx.Graph, DEPOT: int, route_up_to_now: list[RouteStep], r
     if len(route_up_to_now) == 0:
         Exception("Already at depot. This should never happen")
 
-    last_step = route_up_to_now[-1]
-    lastEdge = last_step.get_edge()
-    path = shortest_paths_model.get_shortest_path(lastEdge, (DEPOT,DEPOT,0))[:-1]
+    last_edge = route_up_to_now[-1]
+    path = shortest_paths_model.get_shortest_path(last_edge, (DEPOT,DEPOT,0))[:-1]
 
     # slice at 1 to avoid repeating the last edge
     for edge in path[1:]:
-        curr, salt = visit_arc(G, edge, route=route_up_to_now, route_required=route_required, options=options, curr_salt=salt, all_prev_routes_required=all_prev_routes_required)
+        curr, salt = visit_arc(G, edge, route=route_up_to_now, route_required=route_required, curr_salt=salt)
     return curr
 
 def has_edge_within_capacity(G: nx.Graph, node: int, curr_salt: int) -> bool:
@@ -239,7 +222,7 @@ def reversed_nodes_to_edges(G: nx.MultiDiGraph, node_path: list[int]) -> list[tu
     return edge_path
 
 
-def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, weights: list[float, float, float], random_threshold: float) -> tuple[int, int, dict]:
+def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, int, dict]], prev_node: int, weights: list[float, float, float], random_threshold: float) -> tuple[int, int, dict]:
     """
     Selects an arc from a Restricted Candidate List (RCL) based on various weights.
 
@@ -263,7 +246,6 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
 
     """
     assert sum(weights) == 1
-
     # randomize 5% of the time
     if (random.random() < random_threshold):
         return random.choice(rcl)
@@ -327,25 +309,24 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     index = np.argmax(weights_tot)
     return rcl[index]
 
-def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[tuple[int, int, int]], DEPOT: int, curr_salt: float, sp_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]]) -> tuple[list[RouteStep], list[RouteStep]]:
+def RCA(G: nx.Graph, curr_node: int, route: list[tuple[int, int, int]], route_required: list[tuple[int, int, int]], DEPOT: int, curr_salt: float, sp_model: ShortestPaths) -> tuple[list[tuple[int, int, int]], list[tuple[int, int, int]]]:
     """
     Implements the Route Construction Algorithm (RCA) for snowplow routing.
 
     Args:
         G (networkx.Graph): The graph representing the road network.
         curr_node (int): The current node in the route.
-        route (list[RouteStep]): The current route.
+        route (list[tuple[int, int, int]]): The current route.
         route_required (list[tuple[int, int, int]]): The list of already serviced edges in the current route.
         DEPOT (int): The depot node.
         curr_salt (float): The current salt level.
         sp_model (ShortestPaths): The shortest paths model to use for finding the shortest path.
-        all_prev_routes_required (list): List of all previous routes so far
     Returns:
         tuple: A tuple containing the complete final route and the set of non-deadheaded arcs in the route.
     """
     
     while True:
-        prev_node = route[-1].node1 if len(route) > 0 else None
+        prev_node = route[-1][0] if len(route) > 0 else None
 
         required_arcs, c_min, c_max = get_required_edges_from_node(G, prev_node, curr_node)
         rcl = [] # initialize restricted candidate list
@@ -359,9 +340,8 @@ def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: lis
         
         # chooes an arc based on restricted candidate list if not empty
         if len(rcl) > 0:
-            multiple_neighbors = len(G.edges(curr_node)) > 1
             chosen_arc = choose_arc(G, rcl, prev_node, SELECTION_WEIGHTS, RAND_THRESH)
-            curr_node, curr_salt = visit_arc(G, chosen_arc, options=multiple_neighbors, route=route, route_required=route_required, curr_salt=curr_salt, all_prev_routes_required=all_prev_routes_required)
+            curr_node, curr_salt = visit_arc(G, chosen_arc, route=route, route_required=route_required, curr_salt=curr_salt)
 
         # if restricted candidate list is empty, follow path to nearest node with required arc
         else:
@@ -369,13 +349,12 @@ def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: lis
             # no more required arcs in the graph that we can service, so we're done.
             # return to the depot and refill salt cap
             if path is None:
-                curr_node = return_to_depot(G, DEPOT, route, route_required, curr_salt, sp_model, options=False, all_prev_routes_required=all_prev_routes_required)
+                curr_node = return_to_depot(G, DEPOT, route, route_required, curr_salt, sp_model)
                 return route, route_required
             
             # otherwise go to the arc to visit
             for edge in path:
-                multiple_neighbors = len(G.edges(curr_node)) > 1 # could we take a different path
-                curr_node, curr_salt = visit_arc(G, edge, options=multiple_neighbors, route=route, route_required=route_required, curr_salt=curr_salt, all_prev_routes_required=all_prev_routes_required)
+                curr_node, curr_salt = visit_arc(G, edge, route=route, route_required=route_required, curr_salt=curr_salt)
                 if curr_node == DEPOT:
                     return route, route_required
         # if we're at the depot for any reason, that's the end of a route.
@@ -402,7 +381,7 @@ def calc_total_required_edges(G: nx.Graph) -> int:
             total_required += 1
     return total_required
 
-def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[list[list[RouteStep]], list[list[tuple[int, int, int]]]]:
+def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[list[list[tuple[int, int, int]]], list[list[tuple[int, int, int]]]]:
     """
     Generates a full set of routes given a street network.
     Makes a copy of the original graph to avoid modifying the original.
@@ -425,10 +404,10 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
     routes = []
     routes_only_required = []
 
-    partial_route: list[RouteStep] = list()
+    partial_route: list[tuple[int, int, int]] = list()
     partial_route_required: list[tuple[int, int, int]] = list()
     while all_serviced(total_required) == False:
-        partial_route, partial_route_required = RCA(G_copy, curr_node, partial_route, partial_route_required, DEPOT, curr_salt, sp_model, routes_only_required)
+        partial_route, partial_route_required = RCA(G_copy, curr_node, partial_route, partial_route_required, DEPOT, curr_salt, sp_model)
         
         routes.append(partial_route)
         routes_only_required.append(partial_route_required)

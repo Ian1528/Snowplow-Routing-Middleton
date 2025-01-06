@@ -2,4 +2,13 @@
     "workbench.colorCustomizations": {
       "activityBar.background": "#067d5568"
     },
+    "python.testing.unittestArgs": [
+      "-v",
+      "-s",
+      ".",
+      "-p",
+      "*test.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
   }
