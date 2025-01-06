@@ -79,7 +79,7 @@ def turn_direction_count(G_DUAL: nx.MultiDiGraph, full_route: list[tuple[int, in
     """
 
     turns_hist = dict()
-    for i in range(len(full_route) -1 ):
+    for i in range(len(full_route)-1):
         attrb = G_DUAL.get_edge_data(full_route[i], full_route[i+1])
         if attrb is None:
             continue

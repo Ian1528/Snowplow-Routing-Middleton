@@ -259,17 +259,16 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
     1. If the previous node is None or a random number is greater than 0.8, choose an arc randomly from the RCL.
     2. Otherwise, calculate weights for each arc in the RCL based on turn direction, degree of the next node, and priority.
     3. Normalize the sum of the weights.
-    4. Choose an arc randomly based on the weights, where higher weights are more likely to be chosen.
+    4. Choose an arc based on the weights, where highest weight is always chosen.
 
     """
-
     assert sum(weights) == 1
 
-    # randomize 20% of the time
+    # randomize 5% of the time
     if (random.random() < random_threshold):
         return random.choice(rcl)
     
-    turn_weights = {"straight": 6, "right": 5, "left": 4, "sharp right": 3, "sharp left": 2, "u-turn": 1}
+    turn_weights = {"straight": 100, "right": 10, "left": 5, "sharp right": 5, "sharp left": 2, "u-turn": 0}
     weights_turns = np.empty(len(rcl))
     weights_degrees = np.empty(len(rcl))
     weights_priority = np.empty(len(rcl))
@@ -305,10 +304,10 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
         weights_degrees = weights_degrees / np.sum(weights_degrees)
     if np.sum(weights_priority) != 0:
         weights_priority = weights_priority / np.sum(weights_priority)
-
+    if np.sum(weights_turns) != 0:
+        weights_turns = weights_turns / np.sum(weights_turns)
     # check that we can calculate turn cost
     if prev_node is not None:
-        weights_turns = weights_turns / np.sum(weights_turns)
         weights_tot = weights[0]*weights_turns + weights[1]*weights_degrees + weights[2]*weights_priority
     
     # if there is no previous node, we are at depot, so turn direction doesn't matter.
@@ -322,10 +321,10 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, dict]], prev_node: int, we
 
     # normalize the weights again
     weights_tot = weights_tot / np.sum(weights_tot)
-    
-    # choose an arc based on the weights (higher weights are more likely to be chosen)
-    index = int(np.random.choice(np.linspace(0,len(rcl)-1,len(rcl)), p=weights_tot))
 
+    # choose an arc based on the weights (higher weights are more likely to be chosen)
+    # take the index of the maximum value in weights_tot
+    index = np.argmax(weights_tot)
     return rcl[index]
 
 def RCA(G: nx.Graph, curr_node: int, route: list[RouteStep], route_required: list[tuple[int, int, int]], DEPOT: int, curr_salt: float, sp_model: ShortestPaths, all_prev_routes_required: list[list[RouteStep]]) -> tuple[list[RouteStep], list[RouteStep]]:
@@ -441,15 +440,3 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
         partial_route_required = list()
     
     return routes, routes_only_required
-
-if __name__ == "__main__":
-    from main import G, shortest_paths
-    import plotting
-    r, rreq = route_generation(G, shortest_paths)
-    print("Printing route")
-    for route in rreq:
-        for edge in route:
-            print(edge)
-
-    G_graph = plotting.add_order_attribute(G, rreq)
-    plotting.draw_labeled_multigraph(G_graph, 'order')

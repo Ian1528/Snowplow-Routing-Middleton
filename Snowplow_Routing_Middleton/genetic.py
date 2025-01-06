@@ -173,6 +173,7 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
         population.append(new_sol)
 
         if sol_best.cost > new_sol.cost:
+            print("New best solution found")
             sol_best = new_sol
         # remove worst solution
         remove_worst(population, BETA)

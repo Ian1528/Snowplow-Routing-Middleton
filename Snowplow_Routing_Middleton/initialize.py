@@ -16,8 +16,7 @@ import geopandas as gpd
 import networkx as nx
 import pickle
 import os
-from .params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL
-
+from .params import PLOW_SPEED_HIGHWAY, PLOW_SPEED_RESIDENTIAL, HIGH_PRIORITY_ROADS
 
 def add_toy_street_info(G: nx.Graph) -> None:
     """
@@ -39,6 +38,8 @@ def add_toy_street_info(G: nx.Graph) -> None:
     for edge in G.edges(data=True, keys=True):
         attrb = edge[3]
         highway_type = attrb['highway']
+        length_meters = attrb['length']
+
         attrb['priority'] = priority_keys[highway_type]
         if 'lanes' in attrb:
             if type(attrb['lanes']) == list:
@@ -50,14 +51,20 @@ def add_toy_street_info(G: nx.Graph) -> None:
         else:
             attrb['passes_rem'] = passes_keys[highway_type]
             attrb['salt_per'] = salt_keys[highway_type]
+        
+        if highway_type == "residential":
+            attrb["travel_time"] = length_meters / PLOW_SPEED_RESIDENTIAL
+        else:
+            attrb["travel_time"] = length_meters / PLOW_SPEED_HIGHWAY
+
         attrb['serviced'] = False
-    for edge in G.edges(data=True):
-        attrb = edge[2]
-        if np.random.random() < 0.1:
-            attrb['passes_rem'] = 0
-            attrb['priority'] = 0
-            attrb['salt_per'] = 0
-            attrb['serviced'] = True
+    # for edge in G.edges(data=True):
+    #     attrb = edge[2]
+    #     if np.random.random() < 0.1:
+    #         attrb['passes_rem'] = 0
+    #         attrb['priority'] = 0
+    #         attrb['salt_per'] = 0
+    #         attrb['serviced'] = True
 
 def add_node_weighted_degree(G: nx.Graph) -> None:
     """
@@ -80,6 +87,38 @@ def add_node_weighted_degree(G: nx.Graph) -> None:
     # add a new attribute to each edge, called "deadheading_passes" and initially set to 0
     nx.set_edge_attributes(G, 0, "deadheading_passes")
 
+def set_high_priority_roads(G: nx.MultiDiGraph) -> None:
+    """
+    Updates the priority attribute of the road network based on the information about highest priority streets
+    provided by the city.
+
+    Args:
+        G (nx.MultiDiGraph): graph representing the road network
+    Returns:
+        None
+    """
+    for edge in G.edges(data=True):
+        attrb = edge[2]
+        name_of_edge = attrb.get("name", "None") # potentially have either 1 or 2 names depending on the linestring
+        if type(name_of_edge) == str:
+            name_of_edge = [name_of_edge]
+        for name in name_of_edge:
+            # special cases based on configuration set by params file
+            if name == "Century Avenue":
+                lstring = attrb.get("geometry")
+                for long, lat in lstring.coords:
+                    if long < -89.509817:
+                        attrb.update({"priority": 10})
+                        break
+            elif name == "Park Street:":
+                lstring = attrb.get("geometry")  
+                for long, lat in lstring.coords:
+                    if lat < 43.097088:
+                        attrb.update({"priority": 10})
+                        break
+            elif name in HIGH_PRIORITY_ROADS:
+                attrb.update({"priority": 10})
+                break
 
 def create_small_toy() -> nx.MultiDiGraph:
     """
@@ -140,8 +179,8 @@ def create_small_streets() -> nx.MultiDiGraph:
             G.remove_node(j) # remove all but the strongest connected component from G
 
     add_toy_street_info(G)
+    set_high_priority_roads(G)
     add_node_weighted_degree(G)
-
     # add geometry attribute to all edges
     nodes, edges = ox.graph_to_gdfs(G)
     G = ox.graph_from_gdfs(nodes, edges)
@@ -290,8 +329,9 @@ def create_full_streets() -> nx.MultiDiGraph:
     for i in scc:
         for j in i:
             G.remove_node(j) # remove all but the strongest connected component from G
-
+    set_high_priority_roads(G)
     add_node_weighted_degree(G)
+
     return G
 def add_multi_edges(G: nx.Graph) -> nx.MultiDiGraph:
     """
