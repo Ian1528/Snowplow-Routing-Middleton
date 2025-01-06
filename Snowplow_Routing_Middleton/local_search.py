@@ -570,33 +570,5 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                     modified, best_cost = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], sp, DEPOT, threshold=threshold)
                 if modified:
                     modified_count += 1
-    print("Modified count: ", modified_count)
     new_routes = linked_list_to_individual(head)
     return Solution(new_routes, S.similarities, best_cost, 0)
-
-
-if __name__ == "__main__":
-    from main import create_instance
-    from shortest_paths import ShortestPaths
-    from construction import route_generation
-    from solution import Solution
-    from params import find_depot
-    G, G_DUAL = create_instance(("smalltoy", "genetic"))
-    DEPOT = find_depot(G)[0]
-    shortest_paths = ShortestPaths(G_DUAL, load_data=False, save_data=False)
-    r, rreq = route_generation(G, shortest_paths, DEPOT)
-    required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
-    S_first = Solution(rreq, dict(), routes_cost(G, shortest_paths, rreq, DEPOT), 0)
-    for route in S_first.routes:
-        for step in route:
-            print(step)
-        print("*********************")
-    print("Initial cost: ", S_first.cost)
-
-    S_new = local_improve(S_first, G, shortest_paths, required_edges, DEPOT, threshold=2)
-    print("New routes:")
-    for route in S_new.routes:
-        for step in route:
-            print(step)
-        print("_____")
-
