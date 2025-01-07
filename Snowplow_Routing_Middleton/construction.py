@@ -305,6 +305,8 @@ def choose_arc(G: nx.Graph, rcl: list[tuple[int, int, int, dict]], prev_node: in
     weights_tot = weights_tot / np.sum(weights_tot)
 
     # choose an arc based on the weights (higher weights are more likely to be chosen)
+    # index = int(np.random.choice(np.linspace(0,len(rcl)-1,len(rcl)), p=weights_tot))
+
     # take the index of the maximum value in weights_tot
     index = np.argmax(weights_tot)
     return rcl[index]
