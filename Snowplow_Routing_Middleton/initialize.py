@@ -44,12 +44,16 @@ def add_toy_street_info(G: nx.Graph) -> None:
         if 'lanes' in attrb:
             if type(attrb['lanes']) == list:
                 attrb['passes_rem'] = float(attrb['lanes'][0]) // 2
+                attrb['passes_req'] = float(attrb['lanes'][0]) // 2
+
                 attrb['salt_per'] = float(attrb['lanes'][0]) // 2
             else:
                 attrb['passes_rem'] = float(attrb['lanes']) // 2
                 attrb['salt_per'] = float(attrb['lanes']) // 2
         else:
             attrb['passes_rem'] = passes_keys[highway_type]
+            attrb['passes_req'] = passes_keys[highway_type]
+
             attrb['salt_per'] = salt_keys[highway_type]
         
         if highway_type == "residential":
@@ -99,7 +103,13 @@ def set_high_priority_roads(G: nx.MultiDiGraph) -> None:
     """
     for edge in G.edges(data=True):
         attrb = edge[2]
+
+        is_city_jursidiction = attrb.get("jurisdiction", "None") == "City"
+        if not is_city_jursidiction:
+            continue
+
         name_of_edge = attrb.get("name", "None") # potentially have either 1 or 2 names depending on the linestring
+        
         if type(name_of_edge) == str:
             name_of_edge = [name_of_edge]
         for name in name_of_edge:
@@ -310,6 +320,7 @@ def create_full_streets() -> nx.MultiDiGraph:
         culdesac[index] = is_culdesac(G, edge[1]) # edge[1] corresponds to the second node of the edge
     edges['priority'] = priorities
     edges['passes_rem'] = passes
+    edges['passes_req'] = passes
     edges['salt_per'] = salt
     edges['serviced'] = serviced
     edges['culdesac'] = culdesac

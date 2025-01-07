@@ -214,7 +214,7 @@ def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -
 
 def print_linked_list(head: Node) -> None:
     """
-    Prints the linked oist starting from the head
+    Prints the linked list starting from the head
 
     Args:
         head (Node): head of the linked list
@@ -560,8 +560,8 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     modified_count = 0
     for edge in ALL_EDGES:
         for neighboring_edge in nearest_neighbors[edge][1:K+1]:
+            neighboring_edge = tuple(neighboring_edge)
             for operator in operators:
-                neighboring_edge = tuple(neighboring_edge)
                 if neighboring_edge == (DEPOT,DEPOT,0) or neighboring_edge not in required_edges or neighboring_edge == edge:
                     continue
                 if operator.__name__ == "two_opt":
