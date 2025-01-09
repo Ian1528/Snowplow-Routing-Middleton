@@ -116,6 +116,7 @@ def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route
                 path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
                 full_route.extend(path)
                 salt_val = SALT_CAP
+                print("Returning to Depot")
                 continue
 
             salt_val -= edge_data['salt_per']

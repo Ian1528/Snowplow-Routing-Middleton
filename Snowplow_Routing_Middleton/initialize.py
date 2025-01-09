@@ -266,23 +266,13 @@ def create_full_streets() -> nx.MultiDiGraph:
     Returns:
         nx.MultiDiGraph: The full scale streets network
     """
-    # Read the shapefile
-    osm_data_filepath = os.path.dirname(__file__) + "/graph_data/OSMWithData.gpkg"
+    # path to saved osm graph
+    graph_filepath = os.path.dirname(__file__) + "/graph_data/full_streets_graph.pickle"
 
-    street_gdf = gpd.read_file(osm_data_filepath)
+    with open(graph_filepath, 'rb') as f:
+        G = pickle.load(f)
+    nodes, edges = ox.graph_to_gdfs(G)
 
-    osm_graph_filepath = os.path.dirname(__file__) + "/graph_data/streets_graph.pickle"
-    # Read the OSM Graph
-    G = pickle.load(open(osm_graph_filepath, 'rb'))
-    G = nx.convert_node_labels_to_integers(G)
-
-    nodes, edges = ox.graph_to_gdfs(G) # better than momepy b/c fills in missing geometry attributes
-
-    edges['jurisdiction'] = np.array(street_gdf['Jurisdicti'])
-    edges['width'] = np.array(street_gdf['With_EE_ft'])
-    edges['roadtype'] = np.array(street_gdf['abvPostTyp'])
-    edges['maintainer'] = np.array(street_gdf['Maintained'])
-    G = ox.graph_from_gdfs(nodes, edges)
     priority_keys = {"motorway_link":1, "tertiary_link":1, "secondary_link":1, "primary_link":1, "unclassified":1, "residential":2, "tertiary":3, "secondary":4, "primary":5, "motorway":6}
 
     priorities = np.empty(len(edges))
@@ -301,8 +291,9 @@ def create_full_streets() -> nx.MultiDiGraph:
         width = data['width']
         roadtype = data['roadtype']
         oneway = data['oneway']
+        jurisdiction = data['jurisdiction']
 
-        if street_gdf.iloc[index]['Jurisdicti'] == "City":
+        if jurisdiction == "City":
             priorities[index] = priority_keys[highway_type]
             passes[index] = calc_passes(oneway, width, highway_type, roadtype)
             salt[index] = get_salt_from_length(length_meters)
@@ -340,6 +331,7 @@ def create_full_streets() -> nx.MultiDiGraph:
     for i in scc:
         for j in i:
             G.remove_node(j) # remove all but the strongest connected component from G
+    
     set_high_priority_roads(G)
     add_node_weighted_degree(G)
 
