@@ -15,16 +15,22 @@ class ShortestPaths:
         get_dist(edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> float: returns the shortest distance between two edges of the graph.
         get_shortest_path(edge1: tuple[int, int, int], edge2: tuple[int, int, int]) -> list: returns the shortest path between two edges of the primal graph.
     """
-    dists_array_path = os.path.dirname(__file__) + "\\graph_data\\shortest_distances_array.npy"
-    preds_and_dists_path = os.path.dirname(__file__) + "\\graph_data\\preds_and_dists.pickle"
 
-    def __init__(self, G_DUAL, load_data=True, save_data=False):
+    def __init__(self, G_DUAL, load_data=True, save_data=True, saved_data_folder=None):
         self.G_DUAL: nx.MultiDiGraph = G_DUAL
         self.edge_index_dict = {edge:index for index, edge in enumerate(self.G_DUAL.nodes)}
         self.index_edge_dict = {index:edge for index, edge in enumerate(self.G_DUAL.nodes)}
         self.predecessors = None
         self.dists_array = None
         self.nearest_neighbors = None
+
+        if saved_data_folder is not None:
+            self.dists_array_path = os.path.join(saved_data_folder, "shortest_distances_array.npy")
+            self.preds_and_dists_path = os.path.join(saved_data_folder, "preds_and_dists.pickle")
+        else:
+            self.dists_array_path = None
+            self.preds_and_dists_path = None
+
         if load_data:
             self.load_pred_and_dist()        
             self.load_dists_array()
@@ -75,7 +81,7 @@ class ShortestPaths:
         # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            self.dists_array = np.load(ShortestPaths.dists_array_path)
+            self.dists_array = np.load(self.dists_array_path)
         except:
             self.dists_array = None
             print("No data to fetch")
@@ -91,7 +97,9 @@ class ShortestPaths:
 
         if self.dists_array is None:
             raise Exception("No data to save. First compute the distance matrix before saving")
-        np.save(ShortestPaths.dists_array_path, self.dists_array)
+        if self.dists_array_path is None:
+            raise Exception("No path to save data")
+        np.save(self.dists_array_path, self.dists_array)
 
     def load_pred_and_dist(self):
         """
@@ -106,7 +114,7 @@ class ShortestPaths:
         # filepath = os.path.join(os.path.dirname(os.path.realpath('__file__')), filename)
 
         try:
-            with open(ShortestPaths.preds_and_dists_path, 'rb') as f:
+            with open(self.preds_and_dists_path, 'rb') as f:
                 self.predecessors = pickle.load(f)
         except:
             self.predecessors = None
@@ -124,7 +132,9 @@ class ShortestPaths:
         """
         if self.predecessors is None:
             raise Exception("No data to save. First compute predecessors and distances")
-        with open(ShortestPaths.preds_and_dists_path, 'wb') as f:
+        if self.preds_and_dists_path is None:
+            raise Exception("No path to save data")
+        with open(self.preds_and_dists_path, 'wb') as f:
             pickle.dump(self.predecessors, f)
         
 
