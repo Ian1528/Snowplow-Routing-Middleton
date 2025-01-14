@@ -118,7 +118,7 @@ def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, h
     time = 0
 
     salt_val = SALT_CAP
-
+    deadheading_time = 0
     node = head.next
     while node.next != None:
         edge = node.data
@@ -126,22 +126,40 @@ def routes_cost_linked_list(G: nx.MultiDiGraph, shortest_paths: ShortestPaths, h
         edge_data = G[edge[0]][edge[1]][edge[2]]
 
         if salt_val - edge_data['salt_per'] < 0 or node.is_route_end:
+            # deadheading stuff on the first trip back
+            path_to_depot = shortest_paths.get_shortest_path(edge, (DEPOT,DEPOT,0))
+            if len(path_to_depot) > 2:
+                deadheading_time += shortest_paths.get_dist(path_to_depot[1], (DEPOT,DEPOT,0))
+
+            # time stuff on the first trip back
             time_cost += shortest_paths.get_dist(edge, (DEPOT,DEPOT,0))
+            
+            # update salt
             salt_val = SALT_CAP
+
+            # deadheading stuff on the trip out
+            path_to_next_edge = shortest_paths.get_shortest_path((DEPOT,DEPOT,0), next_edge)
+            if len(path_to_next_edge) > 2:
+                deadheading_time += shortest_paths.get_dist(path_to_next_edge[1], next_edge)
+            # time stuff on the trip out
             time_cost += shortest_paths.get_dist((DEPOT,DEPOT,0), next_edge)
         else:
+            # deadheading time
+            if edge[1] != next_edge[0]:
+                path = shortest_paths.get_shortest_path(edge, next_edge)
+                deadheading_time += shortest_paths.get_dist(path[1], next_edge)
+            # normal time stuff
             time_cost += shortest_paths.get_dist(edge, next_edge)
-
         # penalize priorities
         time += edge_data['travel_time']
         priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
         salt_val -= edge_data['salt_per']
         node = node.next            
     # penalize deadheading
-    for edge in G.edges(data=True):
-        deadhead_cost += edge[2]['deadheading_passes']
+    deadhead_cost = deadheading_time
 
     all_costs = [time_cost, deadhead_cost, priority_cost]
+    # print("linkedListcost, [time, deadhead, priority]", all_costs)
     total_cost = 0
     for i in range(3):
         total_cost += all_costs[i]*COST_WEIGHTS[i]
@@ -202,12 +220,12 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
             # penalize priorities
             time += edge_data['travel_time']
             priority_cost += (edge_data['priority'] * time * PRIORITY_SCALE_FACTOR)
-    print("Deadheading time hours:", deadheading_time/3600)
+            salt_val -= edge_data['salt_per']
     # penalize deadheading
-    for edge in G.edges(data=True):
-        deadhead_cost += edge[2]['deadheading_passes']
+    deadhead_cost = deadheading_time
 
     all_costs = [time_cost, deadhead_cost, priority_cost]
+    # print("[time, deadhead, priority]", all_costs)
     total_cost = 0
     for i in range(3):
         total_cost += all_costs[i]*COST_WEIGHTS[i]
