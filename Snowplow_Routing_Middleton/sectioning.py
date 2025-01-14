@@ -91,11 +91,13 @@ def load_multiple_polygons(path: str) -> tuple[shapely.Polygon, shapely.Polygon]
     return required_part.iloc[0], not_required_part.iloc[0]
 
 
-def section_component(polygon_path: str, required_parts: bool = False) -> nx.MultiDiGraph:
+def section_component(polygon_path: str, required_parts: bool = False, plow_culdesacs: bool = True) -> nx.MultiDiGraph:
     """
     Sections a component of the full streets graph within a given polygon.
     Parameters:
     - polygon_path (str): The path to the file containing the polygon.
+    - required_parts (bool): Whether the polygon consists of a required part and a non-required part.
+    - plow_culdesacs (bool): Whether to plow cul-de-sacs. Only false for the green route.
     Returns:
     - G_sectioned (nx.MultiDiGraph): A sectioned component of the graph within the given polygon.
     """
@@ -122,6 +124,13 @@ def section_component(polygon_path: str, required_parts: bool = False) -> nx.Mul
             G_required[edge[0]][edge[1]][edge[2]]['priority'] = 0
             G_required[edge[0]][edge[1]][edge[2]]['salt_per'] = 0
             G_required[edge[0]][edge[1]][edge[2]]['serviced'] = True
+        
+        if not plow_culdesacs:
+            for edge in G_required.edges(data=True, keys=True):
+                if edge[3].get('culdesac', False):
+                    G_required[edge[0]][edge[1]][edge[2]]['priority'] = 0
+                    G_required[edge[0]][edge[1]][edge[2]]['salt_per'] = 0
+                    G_required[edge[0]][edge[1]][edge[2]]['serviced'] = True
 
         G_required = config_sectioned_component(G_required)
         return G_required

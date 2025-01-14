@@ -62,14 +62,16 @@ def create_instance(graph_instances:tuple[str, str]=("smalltoy", "genetic"), tak
 
     return G, G_DUAL
 
-def solve_section(polygon_path: str, label_color: str, path_color: str, required_parts: bool = True, m: folium.Map | None = None) -> tuple[folium.Map, Solution, list]:
+def solve_section(polygon_path: str, label_color: str, path_color: str, shortest_paths_folder: str, required_parts: bool = True, plow_culdesacs: bool = True, m: folium.Map | None = None) -> tuple[folium.Map, Solution, list]:
     """
     Solves the sectioning problem for a given polygon path.
     Args:
         polygon_path (str): The path to the polygon file.
         label_color (str): The color of the labels for the plotted routes.
         path_color (str): The color of the paths for the plotted routes.
+        shortest_paths_folder (str): The folder containing the shortest paths data.
         required_parts (bool, optional): Flag indicating whether the polygon has non-required and required parts. Defaults to True.
+        plow_culdesacs (bool, optional): Flag indicating whether to plow cul-de-sacs. Defaults to True. Only False for the green route.
         m (folium.Map | None, optional): The folium map object. Defaults to None.
     Returns:
         folium.Map: The folium map object with the plotted routes.
@@ -81,7 +83,7 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
         solve_section('/path/to/polygon_file', 'red', 'blue', m)
     """
     
-    G = sectioning.section_component(polygon_path, required_parts)
+    G = sectioning.section_component(polygon_path, required_parts, plow_culdesacs)
     params.DEPOT = params.find_depot(G)[0]
     DEPOT = params.DEPOT
     print("Depot found, sections are done")
@@ -89,7 +91,7 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, required
     G = initialize.add_multi_edges(G)
     G_DUAL = dual_graphs.create_dual_streets(G, DEPOT)
     print("Graphs created. Depot is at", params.DEPOT)
-    shortest_paths = ShortestPaths(G_DUAL, False, True)
+    shortest_paths = ShortestPaths(G_DUAL, True, False, shortest_paths_folder)
 
     print("Shortest paths created, running genetic algorithm")
     sol = run_genetic(G, shortest_paths, DEPOT)

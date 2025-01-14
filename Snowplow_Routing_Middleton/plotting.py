@@ -161,7 +161,8 @@ def plot_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, int, int]
     return m
 
 
-def find_pairs_of_edges(G: nx.MultiDiGraph) -> tuple[dict[tuple[tuple[int, int, int], tuple[int,int,int]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]:
+def find_clusters_of_edges(G: nx.MultiDiGraph) -> tuple[dict[tuple[list[int, int], list[tuple[int,int,int]]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]:
+
     """
     Find pairs of edges in a graph that represent the same road segment in opposite directions, and find 
     pairs of edges that represent the same road segment in the same direction.
@@ -169,32 +170,26 @@ def find_pairs_of_edges(G: nx.MultiDiGraph) -> tuple[dict[tuple[tuple[int, int, 
     Args:
         G (nx.MultiDiGraph): The graph representing the road network.
     Returns:
-        tuple[dict[tuple[tuple[int, int, int], tuple[int,int,int]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]
-        A tuple of two dictionaries mapping edges in a pair or an antipair to each other. 
-        The first dictionary contains pairs of edges that represent the same road segment in the same direction, 
+        tuple[dict[tuple[list[int, int], list[tuple[int,int,int]]]], dict[tuple[tuple[int, int, int], tuple[int,int,int]]]]:
+        A tuple of two dictionaries. 
+        The first dictionary maps linestrings to the edges that correspond to it.
         and the second dictionary contains pairs of edges that represent the same road segment in opposite directions
     """
-    lstrings = dict() # dictionary mapping linestrings to edges
-    pairs_dict = dict() # dict mapping edge to its pair. Each edge is marked both as a key and a value
+    lstrings_to_single_edges = dict() # dictionary mapping linestrings to edges
     antipairs_dict = dict()
+    lstrings_to_multi_edges = dict()
     for edge in G.edges(data=True, keys=True):
         edge_tup = (edge[0], edge[1], edge[2])
         if edge[3]['geometry'] is not None:
             lstring = tuple(edge[3]['geometry'].coords)
-            # matching pair
-            if lstring in lstrings.keys():
-                pairs_dict.update({edge_tup: lstrings[lstring]})
-                pairs_dict.update({lstrings[lstring]: edge_tup})
-                # lstrings.pop(lstring)
-
             # matching antipair (same road, opposite direction)
-            if lstring[::-1] in lstrings.keys():
-                antipairs_dict.update({edge_tup: lstrings[lstring[::-1]]})
-                antipairs_dict.update({lstrings[lstring[::-1]]: edge_tup})
+            if lstring[::-1] in lstrings_to_single_edges.keys():
+                antipairs_dict.update({edge_tup: lstrings_to_single_edges[lstring[::-1]]})
+                antipairs_dict.update({lstrings_to_single_edges[lstring[::-1]]: edge_tup})
             
-            lstrings.update({lstring: edge_tup})
-
-    return pairs_dict, antipairs_dict
+            lstrings_to_single_edges.update({lstring: edge_tup})
+            lstrings_to_multi_edges.update({lstring: lstrings_to_multi_edges.get(lstring, []) + [edge_tup]})
+    return lstrings_to_multi_edges, antipairs_dict
 def lengthen_lstring_coords(lstring: shapely.LineString, diff: float) -> list[tuple[float, float]]:
     """
     Get the coordinates of a LineString with additional points added to make the lines smoother.
@@ -247,10 +242,9 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
     current_time = datetime.datetime.now()
     features = list()
 
-    pairs_dict, antipairs_dict = find_pairs_of_edges(G)
-    partially_mapped_pairs, partially_mapped_antipairs = set(), set()
-
-    serviced_edges = set()
+    lstrings_to_multi_edges, antipairs_dict = find_clusters_of_edges(G)
+    # find the maximum number of passes an edge requires based on edge attributes in G
+    mapped_edges, partially_mapped_antipairs = set(), set()
     for edge in full_route:
         edge_data = G_copy.get_edge_data(edge[0], edge[1], edge[2])   
         if edge_data is None:
@@ -258,11 +252,12 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
         
         graph_attributes = {"color": path_color, "dashed": False, "weight": 5}
         # if the edge is a part of a pair
-        if edge in pairs_dict.keys():
-            # if the first part of the edge hasn't been serviced, make the line thinner
-            if edge not in partially_mapped_pairs and pairs_dict[edge] not in partially_mapped_pairs:
-                graph_attributes['weight'] = 1
-                partially_mapped_pairs.add(edge)
+        lstring = tuple(edge_data['geometry'].coords)
+        # set the weight based on the number of times this linsestring has been serviced
+        num_mapped_edges = len([pair_edge for pair_edge in lstrings_to_multi_edges[lstring] if pair_edge in mapped_edges])+1
+        total_edges = len(lstrings_to_multi_edges[lstring])+1
+        graph_attributes['weight']= num_mapped_edges/total_edges * 5
+
         if edge in antipairs_dict.keys():
             # if the first part of the edge hasn't been serviced, make the line dashed
             if edge not in partially_mapped_antipairs and antipairs_dict[edge] not in partially_mapped_antipairs:
@@ -270,8 +265,8 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
                 partially_mapped_antipairs.add(edge)
 
             
-        deadhead = False if edge not in serviced_edges else True
-        serviced_edges.add(edge)
+        deadhead = False if edge not in mapped_edges else True
+        mapped_edges.add(edge)
 
         name = edge_data.get("name", "Unnamed")
         if deadhead:
@@ -298,7 +293,7 @@ def plot_moving_routes_folium(G: nx.MultiDiGraph, full_route: list[tuple[int, in
             }
         }
         features.append(feature)
-        folium.PolyLine(locations=lat_long_coords, color="black", weight=.5, tooltip=edge_data).add_to(m)
+        folium.PolyLine(locations=lat_long_coords, color="black", weight=.5, tooltip=str(edge) + " passes: " + str(edge_data.get("passes_req"))).add_to(m)
         current_time += datetime.timedelta(minutes=len(coords))
     folium.plugins.TimestampedGeoJson(
         {
