@@ -185,7 +185,11 @@ def routes_cost(G: nx.Graph, shortest_paths: ShortestPaths, routes: list[list[tu
     salt_val = SALT_CAP
     deadheading_time = 0
     for i in range(len(routes)):
-        route = routes[i]
+        try:
+            route = routes[i]
+        except:
+            print("route", i, "is", routes)
+            raise Exception("route is not a list")
         for j in range(len(route)):
             edge = route[j]
             edge_data = G[edge[0]][edge[1]][edge[2]]

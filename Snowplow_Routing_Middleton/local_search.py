@@ -571,4 +571,6 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                 if modified:
                     modified_count += 1
     new_routes = linked_list_to_individual(head)
+
+    print("Modifed ", modified_count, "times")
     return Solution(new_routes, S.similarities, best_cost, 0)
