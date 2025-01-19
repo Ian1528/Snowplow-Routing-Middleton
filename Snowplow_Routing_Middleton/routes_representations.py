@@ -85,7 +85,7 @@ def create_full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]
                 full_route.append(edge)
     return full_route   
 
-def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT: int) -> list[tuple[int, int, int]]:
+def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route: list[tuple[int, int, int]], DEPOT: int) -> list[tuple[int, int, int]]:
     """
     Create full routes with returns to the depot when salt runs out.
 
@@ -106,34 +106,31 @@ def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route
     
     full_route = list()
     salt_val = SALT_CAP
-    for i in range(len(routes)):
-        for j in range(len(routes[i])):
-            edge = routes[i][j]
-            edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
+    for i in range(len(route)):
+        edge = route[i]
+        edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
 
-            # check to see if salt runs out
-            if salt_val - edge_data['salt_per'] < 0:
-                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
-                full_route.extend(path)
-                salt_val = SALT_CAP
-                print("Returning to Depot")
-                continue
+        # check to see if salt runs out
+        if salt_val - edge_data['salt_per'] < 0:
+            path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+            full_route.extend(path)
+            salt_val = SALT_CAP
+            print("Returning to Depot")
+            continue
 
-            salt_val -= edge_data['salt_per']
-            if j == 0:
-                path = sp.get_shortest_path((DEPOT, DEPOT, 0), edge)
-                full_route.extend(path)
-            elif j+1 < len(routes[i]):
-                next_edge = routes[i][j+1]
-                if edge[1] == next_edge[0]:
-                    full_route.append(edge)
-                else:
-                    path = sp.get_shortest_path(edge, next_edge)
-                    full_route.extend(path)
-                    full_route.pop()
+        salt_val -= edge_data['salt_per']
+        if i == 0:
+            path = sp.get_shortest_path((DEPOT, DEPOT, 0), edge)
+            full_route.extend(path)
+        elif i+1 < len(route):
+            next_edge = route[i+1]
+            if edge[1] == next_edge[0]:
+                full_route.append(edge)
             else:
-                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+                path = sp.get_shortest_path(edge, next_edge)
                 full_route.extend(path)
-                if i != len(routes)-1:
-                    full_route.pop()
+                full_route.pop()
+        else:
+            path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+            full_route.extend(path)
     return full_route            
