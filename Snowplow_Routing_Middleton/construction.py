@@ -393,7 +393,7 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
         sp_model (ShortestPaths): the shortest paths model to use for finding the shortest path
         DEPOT (int): The depot node
     Returns:
-        tuple[list[list[RouteStep]], list[list[RouteStep]]]: Two lists. 
+        tuple[list[tuple[int, int, int]], list[tuple[int, int, int]]: Two lists. 
         The first contains a continuous set of routes, while the second contains only the required edges of the route (so no deadheading edges are included).
     """
     global edges_serviced
@@ -410,9 +410,8 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
     while all_serviced(total_required) == False:
         partial_route, partial_route_required = RCA(G_copy, curr_node, partial_route, partial_route_required, DEPOT, curr_salt, sp_model)
         
-        routes.append(partial_route)
-        routes_only_required.append(partial_route_required)
-        
+        routes.extend(partial_route)
+        routes_only_required.extend(partial_route_required)
         curr_salt = SALT_CAP
         curr_node = DEPOT
 

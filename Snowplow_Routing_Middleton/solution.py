@@ -12,7 +12,7 @@ class Solution:
         add_similarity(S: "Solution", sim: int) -> None: Adds a similarity score between this solution and another solution.
         remove_similarity(S: "Solution") -> None: Removes the similarity score between this solution and another solution.
     """
-    def __init__(self, routes: list[list[tuple[int, int, int]]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
+    def __init__(self, route: list[tuple[int, int, int]], similarities: dict["Solution", int], cost: int, totalSimScore: int):
         """
         Initializes a Solution instance.
         Args:
@@ -21,7 +21,7 @@ class Solution:
             cost (int): The cost associated with the solution.
             totalSimScore (int): The total similarity score for the solution.
         """
-        self.routes = routes
+        self.route = route
         self.cost = cost
         self.similarities = similarities
         self.totalSimScore = totalSimScore

@@ -126,7 +126,7 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, shortest
     print("Shortest paths created, running genetic algorithm")
     sol = run_genetic(G, shortest_paths, DEPOT)
 
-    full_route = create_full_routes_with_returns(G, shortest_paths, sol.routes, DEPOT)
+    full_route = create_full_routes_with_returns(G, shortest_paths, sol.route, DEPOT)
 
     time_seconds = costs.route_travel_time(G, full_route, DEPOT)
     # Display costs and travel time
@@ -134,7 +134,7 @@ def solve_section(polygon_path: str, label_color: str, path_color: str, shortest
     print("Travel time hours", time_seconds/3600)
 
     # plot
-    G_graph = plotting.add_order_attribute(G, sol.routes)
+    G_graph = plotting.add_order_attribute(G, sol.route)
     plotting.draw_labeled_multigraph(G_graph, 'order', size=(75,75), plotDepot=True)
 
     m = plotting.plot_routes_folium(G, full_route, m, label_color, path_color)

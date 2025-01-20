@@ -56,36 +56,35 @@ class RouteStep:
         """
         return (self.node1, self.node2, self.edge_id)
         
-def create_full_routes(sp: ShortestPaths, routes: list[list[tuple[int, int, int]]]) -> list[tuple[int, int, int]]:
+def create_full_routes(sp: ShortestPaths, route: list[tuple[int, int, int]]) -> list[tuple[int, int, int]]:
     """
     Generates a full route by connecting the given routes using the ShortestPaths object.
 
     Args:
         sp (ShortestPaths): An instance of the ShortestPaths class.
-        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route is represented as a list of tuples.
+        routes (list[tuple[int, int, int]]): A list of routes, where each route is represented as a list of tuples.
 
     Returns:
         list[tuple[int, int, int]]: The full route connecting all the given routes.
     """
     full_route = list()
-    for i in range(len(routes)):
-        for j in range(len(routes[i])):
-            edge = routes[i][j]
-            next_edge = routes[i][j+1] if j+1 < len(routes[i]) else routes[i+1][0] if i+1 < len(routes) else None
-            if next_edge is not None:
-                if edge[1] == next_edge[0]:
-                    full_route.append(edge)
-
-                # if the next edge is not connected to the current edge, find the shortest path between them
-                else:
-                    path = sp.get_shortest_path(edge, next_edge)
-                    full_route.extend(path)
-                    full_route.pop()
-            else:
+    for i in range(len(route)):
+        edge = route[i]
+        next_edge = route[i+1] if i+1 < len(route) else None
+        if next_edge is not None:
+            if edge[1] == next_edge[0]:
                 full_route.append(edge)
+
+            # if the next edge is not connected to the current edge, find the shortest path between them
+            else:
+                path = sp.get_shortest_path(edge, next_edge)
+                full_route.extend(path)
+                full_route.pop()
+        else:
+            full_route.append(edge)
     return full_route   
 
-def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, routes: list[list[tuple[int, int, int]]], DEPOT: int) -> list[tuple[int, int, int]]:
+def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route: list[tuple[int, int, int]], DEPOT: int) -> list[tuple[int, int, int]]:
     """
     Create full routes with returns to the depot when salt runs out.
 
@@ -96,8 +95,7 @@ def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route
     Args:
         G (nx.MultiDiGraph): The graph representing the road network.
         sp (ShortestPaths): An object that provides shortest path calculations.
-        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route 
-            is a list of edges represented as tuples (start_node, end_node, key).
+        routes (list[tuple[int, int, int]]): The large route, a list of edges represented as tuples (start_node, end_node, key).
         DEPOT (int): The node representing the depot location.
 
     Returns:
@@ -106,34 +104,31 @@ def create_full_routes_with_returns(G: nx.MultiDiGraph, sp: ShortestPaths, route
     
     full_route = list()
     salt_val = SALT_CAP
-    for i in range(len(routes)):
-        for j in range(len(routes[i])):
-            edge = routes[i][j]
-            edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
+    for i in range(len(route)):
+        edge = route[i]
+        edge_data = G.get_edge_data(edge[0], edge[1], edge[2])
 
-            # check to see if salt runs out
-            if salt_val - edge_data['salt_per'] < 0:
-                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
-                full_route.extend(path)
-                salt_val = SALT_CAP
-                print("Returning to Depot")
-                continue
+        # check to see if salt runs out
+        if salt_val - edge_data['salt_per'] < 0:
+            path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+            full_route.extend(path)
+            salt_val = SALT_CAP
+            print("Returning to Depot")
+            continue
 
-            salt_val -= edge_data['salt_per']
-            if j == 0:
-                path = sp.get_shortest_path((DEPOT, DEPOT, 0), edge)
-                full_route.extend(path)
-            elif j+1 < len(routes[i]):
-                next_edge = routes[i][j+1]
-                if edge[1] == next_edge[0]:
-                    full_route.append(edge)
-                else:
-                    path = sp.get_shortest_path(edge, next_edge)
-                    full_route.extend(path)
-                    full_route.pop()
+        salt_val -= edge_data['salt_per']
+        if i == 0:
+            path = sp.get_shortest_path((DEPOT, DEPOT, 0), edge)
+            full_route.extend(path)
+        elif i+1 < len(route):
+            next_edge = route[i+1]
+            if edge[1] == next_edge[0]:
+                full_route.append(edge)
             else:
-                path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+                path = sp.get_shortest_path(edge, next_edge)
                 full_route.extend(path)
-                if i != len(routes)-1:
-                    full_route.pop()
+                full_route.pop()
+        else:
+            path = sp.get_shortest_path(edge, (DEPOT, DEPOT, 0))
+            full_route.extend(path)
     return full_route            

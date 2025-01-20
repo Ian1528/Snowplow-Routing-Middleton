@@ -167,7 +167,7 @@ def reverse_list(n1: Node, n2: Node):
         n2.is_route_end = False
         n1.is_route_end = True
 
-def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -> tuple[dict[tuple[int, int, int], Node], Node]:
+def individual_to_linked_list(route: list[tuple[int, int, int]], DEPOT: int) -> tuple[dict[tuple[int, int, int], Node], Node]:
     """
     Converts a list of routes to a linked list representation.
 
@@ -185,31 +185,28 @@ def individual_to_linked_list(S: list[list[tuple[int, int, int]]], DEPOT: int) -
     edge_node_map = dict()
     prev_node = head
     # update links
-    for i in range(len(S)):
-        for j in range(len(S[i])):
-            new_node = Node(S[i][j])
-
-            if i == 0 and j == 0:
-                head.next = new_node
-                new_node.prev = head
-                prev_node = new_node
-            elif i == len(S)-1 and j == len(S[i])-1:
-                tail.prev = new_node
-                
-                new_node.prev = prev_node
-                prev_node.next = new_node
-
-                new_node.next = tail
-                new_node.is_route_end = True
-            else:
-                if j == len(S[i])-1:
-                    new_node.is_route_end = True
-                new_node.prev = prev_node
-                prev_node.next = new_node
-                prev_node = new_node
-            
-            edge_node_map[S[i][j]] = new_node
-
+    for i in range(len(route)):
+        edge = route[i]
+        new_node = Node(edge)
+        # head
+        if i == 0:
+            head.next = new_node
+            new_node.prev = head
+            prev_node = new_node
+        # tail
+        elif i == len(route)-1:
+            tail.prev = new_node
+            new_node.prev = prev_node
+            prev_node.next = new_node
+            new_node.next = tail
+            new_node.is_route_end = True
+        
+        # all other cases
+        else:
+            new_node.prev = prev_node
+            prev_node.next = new_node
+            prev_node = new_node
+        edge_node_map[edge] = new_node
     return edge_node_map, head
 
 def print_linked_list(head: Node) -> None:
@@ -227,7 +224,7 @@ def print_linked_list(head: Node) -> None:
             count += 1
         node = node.next
 
-def linked_list_to_individual(head: Node) -> list[list[tuple[int, int, int]]]:
+def linked_list_to_individual(head: Node, DEPOT: int) -> list[list[tuple[int, int, int]]]:
     """
     Converts a linked list of nodes into a list of routes.
     Each node in the linked list contains data and a flag indicating the end of a route.
@@ -239,21 +236,17 @@ def linked_list_to_individual(head: Node) -> list[list[tuple[int, int, int]]]:
         list[list[tuple[int, int, int]]]: A list of routes, where each route is a list of tuples.
     """
 
-    full_routes = []
-    curr_route = []
+    full_route = []
     node = head.next
     while node != None:
-        curr_route.append(node.data)
-
-        if node.is_route_end: # or step.node2 == DEPOT
-            full_routes.append(curr_route)
-            curr_route = []
+        if node.data != (DEPOT, DEPOT, 0):
+            full_route.append(node.data)
         node = node.next
 
     # if len(curr_route) > 0:
     #     curr_route[-1].is_route_end = True
     #     full_routes.append(curr_route)
-    return full_routes
+    return full_route
 
 
 def relocate(G: nx.MultiDiGraph, head: Node, old_cost: float, edge1: Node, edge2: Node, sp: ShortestPaths, DEPOT: int, threshold: float = 1,) -> tuple[bool, float]:
@@ -550,9 +543,9 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
     Returns:
         Solution: the new solution after local improvement
     """
-    ALL_EDGES = [edge for route in S.routes for edge in route if edge != (DEPOT,DEPOT,0)]
+    ALL_EDGES = [edge for edge in S.route if edge != (DEPOT,DEPOT,0)]
     operators = [relocate, relocate_v2, swap, two_opt]
-    edge_node_map, head = individual_to_linked_list(S.routes, DEPOT)
+    edge_node_map, head = individual_to_linked_list(S.route, DEPOT)
     best_cost = S.cost
     random.shuffle(ALL_EDGES)
     random.shuffle(operators)
@@ -570,7 +563,7 @@ def local_improve(S: Solution, G: nx.MultiDiGraph, sp: ShortestPaths, required_e
                     modified, best_cost = operator(G, head, best_cost, edge_node_map[edge], edge_node_map[neighboring_edge], sp, DEPOT, threshold=threshold)
                 if modified:
                     modified_count += 1
-    new_routes = linked_list_to_individual(head)
+    new_routes = linked_list_to_individual(head, DEPOT)
 
     print("Modifed ", modified_count, "times")
     return Solution(new_routes, S.similarities, best_cost, 0)

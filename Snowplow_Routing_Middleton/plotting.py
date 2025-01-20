@@ -88,26 +88,25 @@ def draw_labeled_multigraph(G, attr_name=None, ax=None, color='blue', title="Gra
         )
     plt.show()
 
-def add_order_attribute(G: nx.MultiDiGraph, routes: list[list[tuple[int, int, int]]]) -> nx.MultiDiGraph:
+def add_order_attribute(G: nx.MultiDiGraph, route: list[tuple[int, int, int]]) -> nx.MultiDiGraph:
     """
     Adds an 'order' attribute to the edges of the graph G based on the given routes.
 
     Args:
         G (nx.MultiDiGraph): The graph to which the 'order' attribute will be added.
-        routes (list[list[tuple[int, int, int]]]): A list of routes, where each route is a list of edges.
+        route (list[tuple[int, int, int]]): The route, which is a list of edges.
 
     Returns:
         nx.MultiDiGraph: The graph with the 'order' attribute added to its edges.
     """
     G_graph = G.copy()
     count = 0
-    for route in routes:
-        for edge in route:
-            if G_graph[edge[0]][edge[1]][edge[2]].get('order') is None:
-                G_graph[edge[0]][edge[1]][edge[2]]['order'] = str(count)
-            else:
-                G_graph[edge[0]][edge[1]][edge[2]]['order'] += ", " + str(count)
-            count += 1
+    for edge in route:
+        if G_graph[edge[0]][edge[1]][edge[2]].get('order') is None:
+            G_graph[edge[0]][edge[1]][edge[2]]['order'] = str(count)
+        else:
+            G_graph[edge[0]][edge[1]][edge[2]]['order'] += ", " + str(count)
+        count += 1
     for edge in G_graph.edges(data=True):
         if edge[2].get('order') is None:
             if edge[2].get('priority') == 0:
