@@ -39,42 +39,24 @@ def similarity(S1: Solution, S2: Solution, DEPOT: int) -> int:
     """
     intersections = 0
     edge_sequences = set()
-    count1 = 0
-    count2 = 0
-    for i in range(len(S1.routes)):
-        for j in range(len(S1.routes[i])):
-            if j == 0:
-                edge_sequences.add(((DEPOT,DEPOT,0), S1.routes[i][j]))
-                count1 += 1
-            if j+1 < len(S1.routes[i]):
-                edge_sequences.add((S1.routes[i][j], S1.routes[i][j+1]))
-                count1 += 1
-
-        edge_sequences.add((S1.routes[i][j], (DEPOT, DEPOT, 0)))
-        count1 += 1
-    
-    for i in range(len(S2.routes)):
-        for j in range(len(S2.routes[i])):
-            if j == 0:
-                count2 += 1
-                if ((DEPOT, DEPOT, 0), S2.routes[i][j]) in edge_sequences:
-                    intersections += 1
-            if j+1 < len(S2.routes[i]):
-                if (S2.routes[i][j], S2.routes[i][j+1]) in edge_sequences:
-                    intersections += 1
-                count2 += 1
-        count2 += 1
-        try:
-            if (S2.routes[i][j], (DEPOT, DEPOT, 0)) in edge_sequences:
+    for i in range(len(S1.route)):
+        if i == 0:
+            edge_sequences.add(((DEPOT, DEPOT, 0), S1.route[i]))
+        elif i == len(S1.route)-1:
+            edge_sequences.add((S1.route[i], (DEPOT, DEPOT, 0)))
+        else:
+            edge_sequences.add((S1.route[i], S1.route[i+1]))
+    for i in range(len(S2.route)):
+        if i == 0:
+            if ((DEPOT, DEPOT, 0), S2.route[0]) in edge_sequences:
                 intersections += 1
-        except:
-            print(S2.routes)
-            for route in S2.routes:
-                for step in route:
-                    print(step)
-                print("****")
-            raise ValueError("Error in similarity function")
-    return min(count1, count2) - intersections
+        elif i == len(S2.route)-1:
+            if (S2.route[i], (DEPOT, DEPOT, 0)) in edge_sequences:
+                intersections += 1
+        else:
+            if (S2.route[i], S2.route[i+1]) in edge_sequences:
+                intersections += 1
+    return len(S1.route) - intersections
     
 
 def remove_worst(population: list[Solution], beta: float) -> None:
@@ -122,17 +104,13 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
     sol_best = None
     required_edges = set(edge[:3] for edge in G.edges(data=True, keys=True) if edge[3]['priority'] != 0)
 
-    nearest_neighbors = sp.compute_nearest_neighbors()
+    # nearest_neighbors = sp.compute_nearest_neighbors()
 
     for i in range(POP_SIZE):
         print("initial generation", i)
         r, rreq = route_generation(G, sp, DEPOT)
         new_sol = Solution(rreq, dict(), routes_cost(G, sp, rreq, DEPOT), 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, DEPOT)
-        if(len(new_sol.routes) == 0):
-            print("Found empty route after local improve!!")
-            raise Exception()
-
         if i == 0:
             sol_best = new_sol
         else:
@@ -154,17 +132,12 @@ def run_genetic(G: nx.MultiDiGraph, sp: ShortestPaths, DEPOT: int) -> Solution:
         # select another random solution
         S2 = random.choice(list(S1.similarities.keys()))
         # apply crossover to generate new solution
-        routes0 = apply_crossover(G, sp, S1.routes, S2.routes, DEPOT)
-        if(len(new_sol.routes) == 0):
-            print("Found empty route after crossover!!")
-            raise Exception()
+        routes0 = apply_crossover(G, sp, S1.route, S2.route, DEPOT)
 
         new_cost = routes_cost(G, sp, routes0, DEPOT)
         new_sol = Solution(routes0, dict(), new_cost, 0)
         new_sol = local_improve(new_sol, G, sp, required_edges, DEPOT)
-        if(len(new_sol.routes) == 0):
-            print("Found empty route after localimprove, routes were ", routes0)
-            raise Exception()
+
         # update similarities
         for i in range(len(population)):
             sim = similarity(population[i], new_sol, DEPOT)

@@ -412,7 +412,6 @@ def route_generation(G: nx.Graph, sp_model: ShortestPaths, DEPOT: int) -> tuple[
         
         routes.extend(partial_route)
         routes_only_required.extend(partial_route_required)
-        print(routes_only_required)
         curr_salt = SALT_CAP
         curr_node = DEPOT
 
